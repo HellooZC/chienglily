@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Great+Vibes&display=swap" rel="stylesheet">
+
+<title>Wedding Login</title>
+
+<style>
+body {
+  font-family: system-ui, sans-serif;
+}
+.font-script {
+  font-family: 'Great Vibes', cursive;
+}
+.font-serif {
+  font-family: 'Cormorant Garamond', serif;
+}
+</style>
+</head>
+
+<body class="bg-[#FFF5F7] flex justify-center">
+
+<!-- MOBILE CONTAINER -->
+<div class="w-full max-w-[430px] min-h-screen bg-white shadow-2xl overflow-hidden">
+
+  <!-- ===================== -->
+  <!-- 🎠 CAROUSEL -->
+  <!-- ===================== -->
+  <div class="relative h-[55vh] overflow-hidden">
+
+    <img class="slide absolute inset-0 w-full h-full object-cover opacity-100 transition-opacity duration-700"
+      src="https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=800&auto=format&fit=crop">
+
+    <img class="slide absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-700"
+      src="https://images.unsplash.com/photo-1529634891599-ccf04d7bba7c?q=80&w=800&auto=format&fit=crop">
+
+    <img class="slide absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-700"
+      src="https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?q=80&w=800&auto=format&fit=crop">
+
+    <!-- overlay -->
+    <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+
+    <!-- caption -->
+    <p id="caption"
+      class="absolute bottom-16 w-full text-center text-white text-sm italic px-6">
+      A moment to cherish forever
+    </p>
+
+    <!-- label -->
+    <div class="absolute top-5 left-1/2 -translate-x-1/2 bg-white/20 backdrop-blur-md border border-white/30 rounded-full px-4 py-1 text-white text-xs tracking-widest uppercase">
+      Wedding Day
+    </div>
+
+  </div>
+
+  <!-- ===================== -->
+  <!-- 💍 LOGIN SECTION -->
+  <!-- ===================== -->
+  <div class="flex flex-col items-center px-8 py-10 gap-6">
+
+    <!-- TITLE -->
+    <div class="text-center space-y-1">
+      <p class="text-5xl text-[#111827] leading-tight font-script">
+        Chieng & Lily
+      </p>
+
+      <p class="text-xs tracking-[0.25em] uppercase text-[#6B7280]">
+        Oct 20, 2026
+      </p>
+    </div>
+
+    <!-- DIVIDER (FIXED HEART) -->
+    <div class="flex items-center gap-3 w-full">
+      <div class="flex-1 h-px bg-[#F3F4F6]"></div>
+
+      <span class="text-[#fcd2e6] text-lg">❤</span>
+
+      <div class="flex-1 h-px bg-[#F3F4F6]"></div>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div class="w-full space-y-4">
+
+      <input type="text" placeholder="Email"
+        class="w-full border border-[#F3F4F6] rounded-lg px-4 py-2
+        focus:ring-2 focus:ring-[#fcd2e6] outline-none"/>
+
+      <input type="password" placeholder="Password"
+        class="w-full border border-[#F3F4F6] rounded-lg px-4 py-2
+        focus:ring-2 focus:ring-[#fcd2e6] outline-none"/>
+
+      <button
+        class="w-full bg-[#fcd2e6] hover:bg-[#f9a2cb] text-white py-3 rounded-full text-sm tracking-widest uppercase transition">
+        Sign In
+      </button>
+
+    </div>
+
+    <!-- FOOTER -->
+    <p class="text-xs text-[#6B7280] text-center mt-6 font-serif">
+      A day of love, laughter & happily ever after
+    </p>
+
+  </div>
+
+</div>
+
+<!-- ===================== -->
+<!-- 🧠 CAROUSEL SCRIPT -->
+<!-- ===================== -->
+<script>
+const slides = document.querySelectorAll(".slide");
+const captions = [
+  "A moment to cherish forever",
+  "Two hearts, one story",
+  "Golden memories"
+];
+
+let index = 0;
+
+function showSlide(i) {
+  slides.forEach((s, idx) => {
+    s.style.opacity = idx === i ? "1" : "0";
+  });
+
+  document.getElementById("caption").innerText = captions[i];
+}
+
+function nextSlide() {
+  index = (index + 1) % slides.length;
+  showSlide(index);
+}
+
+setInterval(nextSlide, 4000);
+</script>
+
+</body>
+</html>
