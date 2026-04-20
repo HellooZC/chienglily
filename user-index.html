@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Great+Vibes&display=swap" rel="stylesheet">
+
+<title>Wedding Login</title>
+
+<style>
+body {
+  font-family: system-ui, sans-serif;
+}
+.font-script {
+  font-family: 'Great Vibes', cursive;
+}
+.font-serif {
+  font-family: 'Cormorant Garamond', serif;
+}
+</style>
+</head>
+
+<body class="bg-white flex justify-center">
+
+<!-- MOBILE CONTAINER -->
+<div class="w-full max-w-[430px] min-h-screen bg-white shadow-2xl overflow-hidden">   
+    <!-- APP WRAPPER -->
+    <div class="min-h-screen bg-white flex flex-col">
+        <!-- PAGE CONTENT (dynamic area) -->
+        <div id="page-content" class="flex-1 pb-20">
+            <!-- Camera / Album / Profile content loads here -->
+        </div>
+        <!-- ===================== -->
+        <!-- 📱 BOTTOM NAV BAR -->
+        <!-- ===================== -->
+        <div class="fixed bottom-0 left-0 right-0 flex justify-center">
+
+            <div class="w-full max-w-[430px] bg-white/90 backdrop-blur-md border-t border-[#F3F4F6] flex justify-around py-3">
+
+            <!-- ALBUM -->
+            <button onclick="showPage('album')" class="flex flex-col items-center text-xs text-gray-500">
+                <span class="text-lg">🖼</span>
+                Album
+            </button>
+
+            <!-- CAMERA (CENTER, IMPORTANT) -->
+            <button onclick="showPage('camera')"
+                class="flex flex-col items-center -mt-8 bg-[#fcd2e6] text-white w-14 h-14 rounded-full shadow-lg justify-center">
+                <span class="text-lg">📷</span>
+            </button>
+
+            <!-- PROFILE -->
+            <button onclick="showPage('profile')" class="flex flex-col items-center text-xs text-gray-500">
+                <span class="text-lg">👤</span>
+                Profile
+            </button>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+function showPage(page) {
+  const content = document.getElementById("page-content");
+
+  if (page === "album") {
+    content.innerHTML = `
+      <div class="p-6">
+        <h2 class="text-xl font-serif">Your Album</h2>
+        <p class="text-gray-500 text-sm mt-2">Photos you captured will appear here.</p>
+      </div>
+    `;
+  }
+
+  if (page === "camera") {
+    content.innerHTML = `
+      <div class="p-6 text-center">
+        <h2 class="text-xl font-serif mb-4">Take Photo</h2>
+        <button class="bg-[#fcd2e6] text-white px-6 py-3 rounded-full">
+          Open Camera
+        </button>
+        <p class="text-sm text-gray-500 mt-4">Add caption after capture</p>
+      </div>
+    `;
+  }
+
+  if (page === "profile") {
+    content.innerHTML = `
+      <div class="p-6 text-center">
+        <h2 class="text-xl font-serif">Profile</h2>
+        <p class="mt-2 text-gray-700">John Doe</p>
+
+        <button class="mt-6 bg-red-400 text-white px-4 py-2 rounded-full">
+          Logout
+        </button>
+      </div>
+    `;
+  }
+}
+
+// default page
+showPage("album");
+</script>
+
+</body>
+</html>
+
+
