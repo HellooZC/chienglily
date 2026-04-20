@@ -8,8 +8,10 @@
 
 <!-- Google Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Great+Vibes&display=swap" rel="stylesheet">
-
-<title>Wedding Login</title>
+<!-- YOUR THEME -->
+<link rel="stylesheet" href="assets/css/theme.css">
+<link rel="stylesheet" href="assets/css/style.css">
+<title>Wedding User</title>
 
 <style>
 body {
@@ -24,12 +26,12 @@ body {
 </style>
 </head>
 
-<body class="bg-white flex justify-center">
+<body class="bg-[var(--color-bg)] flex justify-center">
 
 <!-- MOBILE CONTAINER -->
-<div class="w-full max-w-[430px] min-h-screen bg-white shadow-2xl overflow-hidden">   
+<div class="w-full max-w-[430px] min-h-screen bg-[var(--color-bg)] shadow-2xl overflow-hidden"> 
     <!-- APP WRAPPER -->
-    <div class="min-h-screen bg-white flex flex-col">
+    <div class="min-h-screen bg-[var(--color-bg)] flex flex-col">
         <!-- PAGE CONTENT (dynamic area) -->
         <div id="page-content" class="flex-1 pb-20">
             <!-- Camera / Album / Profile content loads here -->
@@ -37,77 +39,400 @@ body {
         <!-- ===================== -->
         <!-- 📱 BOTTOM NAV BAR -->
         <!-- ===================== -->
+
         <div class="fixed bottom-0 left-0 right-0 flex justify-center">
+        
+        <div class="w-full max-w-[430px] bg-[var(--color-bg)]/95 backdrop-blur-md border-t border-[var(--color-border)] flex justify-around items-center py-2 relative">
 
-            <div class="w-full max-w-[430px] bg-white/90 backdrop-blur-md border-t border-[#F3F4F6] flex justify-around py-3">
+            <!-- ================= ALBUM ================= -->
+            <button onclick="showPage('album')" 
+            class="flex flex-col items-center text-xs text-[var(--color-muted)] hover:text-[var(--color-primary)] transition">
 
-            <!-- ALBUM -->
-            <button onclick="showPage('album')" class="flex flex-col items-center text-xs text-gray-500">
-                <span class="text-lg">🖼</span>
-                Album
+            <!-- icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+
+            Album
             </button>
 
-            <!-- CAMERA (CENTER, IMPORTANT) -->
+            <!-- ================= CAMERA (CENTER FLOAT) ================= -->
             <button onclick="showPage('camera')"
-                class="flex flex-col items-center -mt-8 bg-[#fcd2e6] text-white w-14 h-14 rounded-full shadow-lg justify-center">
-                <span class="text-lg">📷</span>
+            class="absolute -top-7 left-1/2 -translate-x-1/2 
+                    w-14 h-14 rounded-full 
+                    bg-[var(--color-primary)] 
+                    text-white shadow-lg 
+                    flex items-center justify-center">
+
+            <!-- camera icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M3 7h2l2-3h10l2 3h2a2 2 0 012 2v10a2 2 0 01-2 2H3a2 2 0 01-2-2V9a2 2 0 012-2z" />
+                <circle cx="12" cy="13" r="3" stroke-width="1.5"/>
+            </svg>
+
             </button>
 
-            <!-- PROFILE -->
-            <button onclick="showPage('profile')" class="flex flex-col items-center text-xs text-gray-500">
-                <span class="text-lg">👤</span>
-                Profile
+            <!-- ================= PROFILE ================= -->
+            <button onclick="showPage('profile')" 
+            class="flex flex-col items-center text-xs text-[var(--color-muted)] hover:text-[var(--color-primary)] transition">
+
+            <!-- icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M5.121 17.804A10.97 10.97 0 0112 15c2.21 0 4.253.657 5.879 1.804M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+
+            Profile
             </button>
 
-            </div>
-
+        </div>
         </div>
     </div>
 </div>
+<!-- IMAGE MODAL -->
+<div id="imageModal" 
+     class="fixed inset-0 hidden items-center justify-center z-50">
 
+  <!-- dark background -->
+  <div id="modalBg" class="absolute inset-0 bg-black/80"></div>
+
+  <!-- image -->
+  <img id="modalImg"
+       class="relative max-w-[90%] max-h-[80%] rounded-2xl shadow-2xl border border-white/20">
+</div>
 <script>
+// ==========================
+// GALLERY STATE
+// ==========================
+let imageList = [];
+let currentIndex = 0;
+
+// ==========================
+// OPEN IMAGE (MAIN)
+// ==========================
+function openImage(src) {
+  setupImageList(src);
+
+  const modal = document.getElementById("imageModal");
+  const modalImg = document.getElementById("modalImg");
+
+  modalImg.src = src;
+
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+
+  modal.classList.add("animate-fade");
+}
+
+// ==========================
+// BUILD IMAGE ARRAY + INDEX
+// ==========================
+function setupImageList(src) {
+  const imgs = document.querySelectorAll(".album-img");
+
+  imageList = Array.from(imgs).map(img => img.src);
+  currentIndex = imageList.indexOf(src);
+}
+
+// ==========================
+// NAVIGATE IMAGES
+// ==========================
+function showImage(index) {
+  if (index < 0) index = imageList.length - 1;
+  if (index >= imageList.length) index = 0;
+
+  currentIndex = index;
+
+  const modalImg = document.getElementById("modalImg");
+  modalImg.src = imageList[currentIndex];
+}
+
+function nextImage() {
+  showImage(currentIndex + 1);
+}
+
+function prevImage() {
+  showImage(currentIndex - 1);
+}
+
+// ==========================
+// CLOSE MODAL
+// ==========================
+function closeImage() {
+  const modal = document.getElementById("imageModal");
+  modal.classList.add("hidden");
+  modal.classList.remove("flex");
+}
+
+// ==========================
+// DOM READY
+// ==========================
+document.addEventListener("DOMContentLoaded", () => {
+
+  document.getElementById("modalBg").addEventListener("click", closeImage);
+
+  // swipe support
+  let startX = 0;
+
+  const modalImg = document.getElementById("modalImg");
+
+  modalImg.addEventListener("touchstart", (e) => {
+    startX = e.touches[0].clientX;
+  });
+
+  modalImg.addEventListener("touchend", (e) => {
+    let endX = e.changedTouches[0].clientX;
+
+    if (startX - endX > 50) {
+      nextImage(); // swipe left
+    } else if (endX - startX > 50) {
+      prevImage(); // swipe right
+    }
+  });
+
+  // click delegation for images
+  document.addEventListener("click", (e) => {
+    if (e.target.classList.contains("album-img")) {
+      openImage(e.target.src);
+    }
+  });
+});
+
+
+// ==========================
+// PAGE SYSTEM
+// ==========================
+let stream = null;
+let currentPage = "album";
 function showPage(page) {
   const content = document.getElementById("page-content");
+    if (currentPage === "camera" && page !== "camera") {
+    stopCamera();
+  }
 
+  currentPage = page;
   if (page === "album") {
+    stopCamera();
     content.innerHTML = `
-      <div class="p-6">
-        <h2 class="text-xl font-serif">Your Album</h2>
-        <p class="text-gray-500 text-sm mt-2">Photos you captured will appear here.</p>
+      <div class="p-4">
+
+        <div class="flex flex-col items-center justify-center text-center py-6">
+            <!-- MAIN TITLE -->
+            <h2 class="text-3xl font-script text-[var(--color-text)] leading-tight tracking-wide">
+                Wedding Album
+            </h2>
+
+            <!-- SUBTITLE -->
+            <p class="mt-2 text-xs tracking-[0.3em] uppercase text-[var(--color-muted)]">
+                All memories captured
+            </p>
+
+            <!-- DECOR LINE -->
+            <div class="mt-4 w-16 h-[1px] bg-[var(--color-border)] opacity-60"></div>
+
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+
+          <div class="relative rounded-2xl overflow-hidden">
+            <img src="assets/login-1.jpeg" class="album-img w-full h-52 object-cover cursor-pointer">
+          </div>
+
+          <div class="relative rounded-2xl overflow-hidden">
+            <img src="assets/login-2.jpeg" class="album-img w-full h-52 object-cover cursor-pointer">
+          </div>
+
+          <div class="relative rounded-2xl overflow-hidden">
+            <img src="assets/login-3.jpeg" class="album-img w-full h-52 object-cover cursor-pointer">
+          </div>
+
+          <div class="relative rounded-2xl overflow-hidden">
+            <img src="assets/login-4.jpeg" class="album-img w-full h-52 object-cover cursor-pointer">
+          </div>
+
+        </div>
       </div>
     `;
   }
 
-  if (page === "camera") {
+    if (page === "camera") {
+    setTimeout(() => {
+      startCamera();
+    }, 300);
     content.innerHTML = `
-      <div class="p-6 text-center">
-        <h2 class="text-xl font-serif mb-4">Take Photo</h2>
-        <button class="bg-[#fcd2e6] text-white px-6 py-3 rounded-full">
-          Open Camera
+        <div class="flex flex-col items-center justify-center p-4">
+
+        <!-- TITLE -->
+        <div class="text-center mb-4">
+            <h2 class="text-2xl font-script text-[var(--color-text)]">
+            Capture Moment
+            </h2>
+            <p class="text-xs tracking-[0.25em] uppercase text-[var(--color-muted)] mt-1">
+            Wedding Photo Booth
+            </p>
+        </div>
+
+        <!-- CAMERA FRAME -->
+        <div class="relative w-full max-w-sm rounded-3xl overflow-hidden bg-black shadow-2xl">
+
+            <video id="cameraVideo"
+            autoplay
+            playsinline
+            class="w-full h-[500px] object-cover"></video>
+
+            <div class="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/10 pointer-events-none"></div>
+
+            <div class="absolute inset-0 border border-white/10 rounded-3xl pointer-events-none"></div>
+
+        </div>
+
+        <!-- CAPTURE BUTTON ONLY -->
+        <div class="relative -mt-8 z-10">
+            <button onclick="takePhoto()"
+            class="w-16 h-16 rounded-full bg-[var(--color-primary)] shadow-xl flex items-center justify-center border-4 border-white">
+
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M3 7h2l2-3h10l2 3h2a2 2 0 012 2v10a2 2 0 01-2 2H3a2 2 0 01-2-2V9a2 2 0 012-2z" />
+                <circle cx="12" cy="13" r="3" stroke-width="1.5"/>
+            </svg>
+
+            </button>
+        </div>
+
+        <canvas id="photoCanvas" class="hidden"></canvas>
+
+        <img id="photoResult"
+            class="hidden mt-5 rounded-2xl shadow-xl w-full max-w-sm" />
+
+        </div>
+    `;
+    }
+
+    if (page === "profile") {
+    stopCamera();
+
+    content.innerHTML = `
+        <div class="p-6 flex flex-col items-center text-center min-h-[80vh]">
+
+        <!-- AVATAR -->
+        <div class="w-24 h-24 rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center shadow-lg border border-[var(--color-border)]">
+            <span class="text-2xl font-script text-[var(--color-text)]">
+            JD
+            </span>
+        </div>
+
+        <!-- NAME -->
+        <h2 class="mt-4 text-2xl font-script text-[var(--color-text)]">
+            John Doe
+        </h2>
+
+        <!-- TAG -->
+        <p class="text-xs tracking-[0.25em] uppercase text-[var(--color-muted)] mt-1">
+            Wedding Guest
+        </p>
+
+        <!-- DIVIDER -->
+        <div class="my-6 w-20 h-[1px] bg-[var(--color-border)] opacity-60"></div>
+
+        <!-- MESSAGE CARD -->
+        <div class="w-full bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-[var(--color-border)] shadow-md">
+            <p class="text-sm text-[var(--color-text)] leading-relaxed">
+            Thank you for being part of our special day.  
+            Every smile, every photo, and every moment captured here
+            means the world to us.
+            </p>
+        </div>
+
+        <!-- SPACER (push button to bottom) -->
+        <div class="flex-1"></div>
+
+        <!-- SIGN OUT BUTTON -->
+        <button onclick="signOut()"
+            class="mt-8 w-full max-w-sm py-3 rounded-2xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium shadow-lg active:scale-95 transition" href="https://helloozc.github.io/chienglily/login">
+            Sign Out
         </button>
-        <p class="text-sm text-gray-500 mt-4">Add caption after capture</p>
-      </div>
-    `;
-  }
 
-  if (page === "profile") {
-    content.innerHTML = `
-      <div class="p-6 text-center">
-        <h2 class="text-xl font-serif">Profile</h2>
-        <p class="mt-2 text-gray-700">John Doe</p>
+        <!-- FOOTER -->
+        <p class="mt-4 text-xs text-[var(--color-muted)]">
+            With love & gratitude ❤️
+        </p>
 
-        <button class="mt-6 bg-red-400 text-white px-4 py-2 rounded-full">
-          Logout
-        </button>
-      </div>
+        </div>
     `;
-  }
+    }
 }
 
 // default page
 showPage("album");
-</script>
 
+//camera functionality
+
+
+// START CAMERA
+async function startCamera() {
+  try {
+    const video = document.getElementById("cameraVideo");
+    if (!video) return;
+
+    if (stream) return; // prevent duplicate start
+
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "user" },
+      audio: false
+    });
+
+    video.srcObject = stream;
+
+  } catch (err) {
+    console.error("Camera error:", err);
+    alert("Camera access denied or not supported.");
+  }
+}
+
+// STOP CAMERA
+function stopCamera() {
+  if (stream) {
+    stream.getTracks().forEach(track => track.stop());
+    stream = null;
+  }
+
+  const video = document.getElementById("cameraVideo");
+  if (video) video.srcObject = null;
+}
+
+// TAKE PHOTO
+function takePhoto() {
+  const video = document.getElementById("cameraVideo");
+  const canvas = document.getElementById("photoCanvas");
+  const img = document.getElementById("photoResult");
+
+  if (!video || !stream) return;
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0);
+
+  const dataURL = canvas.toDataURL("image/jpeg");
+
+  img.src = dataURL;
+  img.classList.remove("hidden");
+}
+</script>
+<style>
+.animate-fade {
+  animation: fadeIn 0.25s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+</style>
 </body>
 </html>
 

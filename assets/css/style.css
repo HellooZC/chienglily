@@ -1,0 +1,95 @@
+
+/* =========================
+   WEDDING DESIGN SYSTEM
+========================= */
+
+/* Fonts */
+.font-script {
+  font-family: 'Great Vibes', cursive;
+}
+
+.font-serif {
+  font-family: 'Cormorant Garamond', serif;
+}
+
+/* =========================
+   TYPOGRAPHY SCALE
+========================= */
+
+.title-xl {
+  font-family: 'Great Vibes', cursive;
+  font-size: 3rem;
+  color: var(--color-text);
+  line-height: 1.1;
+}
+
+.title-lg {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.title-md {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.body {
+  font-family: system-ui, sans-serif;
+  font-size: 0.95rem;
+  color: var(--color-text);
+}
+
+.caption {
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
+.micro {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+  letter-spacing: 0.05em;
+}
+
+/* =========================
+   WEDDING HEADER BLOCK
+========================= */
+
+.wedding-header {
+  text-align: center;
+  line-height: 1.2;
+}
+
+.wedding-name {
+  font-size: 3rem;
+  font-family: 'Great Vibes', cursive;
+  color: var(--color-text);
+}
+
+.wedding-date {
+  font-size: 0.75rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+/* =========================
+   UI HELPERS
+========================= */
+
+.card {
+  background: var(--color-bg);
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.section {
+  padding: 1rem;
+}
+
+.section-header {
+  margin-bottom: 1rem;
+}

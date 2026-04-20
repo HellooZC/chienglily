@@ -9,6 +9,9 @@
 <!-- Google Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Great+Vibes&display=swap" rel="stylesheet">
 
+<!-- YOUR THEME -->
+<link rel="stylesheet" href="assets/css/theme.css">
+
 <title>Wedding Login</title>
 
 <style>
@@ -24,51 +27,53 @@ body {
 </style>
 </head>
 
-<body class="bg-white flex justify-center">
+<body class="bg-[var(--color-bg)] flex justify-center">
 
 <!-- MOBILE CONTAINER -->
-<div class="w-full max-w-[430px] min-h-screen bg-[#fbf8f5] shadow-2xl overflow-hidden">
-    <!-- 🎠 CAROUSEL (UPGRADED) -->
-    <!-- ===================== -->
-    <div class="relative h-[55vh] overflow-hidden p-4">
-        <!-- CAROUSEL CARD -->
-        <div class="relative w-full h-full rounded-3xl overflow-hidden shadow-lg">
+<div class="w-full max-w-[430px] min-h-screen bg-[var(--color-bg)] shadow-2xl overflow-hidden">
 
-            <img class="slide absolute inset-0 w-full h-full object-cover opacity-100 transition-opacity duration-700"
-            src="assets/login-1.jpeg">
+  <!-- ===================== -->
+  <!-- 🎠 CAROUSEL -->
+  <!-- ===================== -->
+  <div class="relative h-[55vh] overflow-hidden p-4">
 
-            <img class="slide absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-700"
-            src="assets/login-2.jpeg">
+    <div class="relative w-full h-full rounded-3xl overflow-hidden shadow-lg">
 
-            <img class="slide absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-700"
-            src="assets/login-3.jpeg">
+      <img class="slide absolute inset-0 w-full h-full object-cover opacity-100 transition-opacity duration-700"
+        src="assets/login-1.jpeg">
 
-            <!-- overlay -->
-            <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                <!-- caption -->
-                <p id="caption"
-                class="absolute bottom-16 w-full text-center text-white text-sm italic px-6 font-serif">
-                A moment to cherish forever
-                </p>
+      <img class="slide absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-700"
+        src="assets/login-2.jpeg">
 
-                <!-- floating label -->
-                <div class="absolute top-5 left-1/2 -translate-x-1/2 bg-white/20 backdrop-blur-md border border-white/30 rounded-full px-4 py-1 text-white text-xs tracking-widest uppercase">
-                Wedding Day
-            </div>
+      <img class="slide absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-700"
+        src="assets/login-3.jpeg">
 
-        </div>
+      <!-- overlay -->
+      <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
 
-        <!-- ===================== -->
-        <!-- 🔵 PROGRESS DOTS (UPGRADED) -->
-        <!-- ===================== -->
-        <div class="absolute bottom-6 left-0 right-0 flex justify-center gap-2">
+      <!-- caption -->
+      <p id="caption"
+        class="absolute bottom-16 w-full text-center text-white text-sm italic px-6 font-serif">
+        A moment to cherish forever
+      </p>
 
-            <div class="dot w-6 h-1 bg-white rounded-full opacity-100 transition-all duration-300"></div>
-            <div class="dot w-2 h-2 bg-white/50 rounded-full transition-all duration-300"></div>
-            <div class="dot w-2 h-2 bg-white/50 rounded-full transition-all duration-300"></div>
+      <!-- label -->
+      <div class="absolute top-5 left-1/2 -translate-x-1/2 bg-white/20 backdrop-blur-md border border-white/30 rounded-full px-4 py-1 text-white text-xs tracking-widest uppercase">
+        Wedding Day
+      </div>
 
-        </div>
     </div>
+
+    <!-- PROGRESS DOTS -->
+    <div class="absolute bottom-6 left-0 right-0 flex justify-center gap-2">
+
+      <div class="dot w-6 h-1 bg-white rounded-full opacity-100 transition-all duration-300"></div>
+      <div class="dot w-2 h-2 bg-white/50 rounded-full transition-all duration-300"></div>
+      <div class="dot w-2 h-2 bg-white/50 rounded-full transition-all duration-300"></div>
+
+    </div>
+
+  </div>
 
   <!-- ===================== -->
   <!-- 💍 LOGIN SECTION -->
@@ -77,44 +82,45 @@ body {
 
     <!-- TITLE -->
     <div class="text-center space-y-1">
-      <p class="text-5xl text-[#111827] leading-tight font-script">
+      <p class="text-5xl text-[var(--color-text)] leading-tight font-script">
         Chieng & Lily
       </p>
 
-      <p class="text-xs tracking-[0.25em] uppercase text-[#6B7280]">
+      <p class="text-xs tracking-[0.25em] uppercase text-[var(--color-muted)]">
         Oct 03, 2026
       </p>
     </div>
 
-    <!-- DIVIDER (FIXED HEART) -->
+    <!-- DIVIDER -->
     <div class="flex items-center gap-3 w-full">
-      <div class="flex-1 h-px bg-[#F3F4F6]"></div>
+      <div class="flex-1 h-px bg-[var(--color-border)]"></div>
 
-      <span class="text-[#d3bdaf] text-lg">❤</span>
+      <span class="text-[var(--color-accent)] text-lg">❤</span>
 
-      <div class="flex-1 h-px bg-[#F3F4F6]"></div>
+      <div class="flex-1 h-px bg-[var(--color-border)]"></div>
     </div>
 
     <!-- LOGIN FORM -->
     <div class="w-full space-y-4">
 
       <input type="text" placeholder="Email"
-        class="w-full border border-[#F3F4F6] rounded-lg px-4 py-2
-        focus:ring-2 focus:ring-[#a17157] outline-none"/>
+        class="w-full border border-[var(--color-border)] rounded-lg px-4 py-2
+        focus:ring-2 focus:ring-[var(--color-primary-hover)] outline-none"/>
 
       <input type="password" placeholder="Password"
-        class="w-full border border-[#F3F4F6] rounded-lg px-4 py-2
-        focus:ring-2 focus:ring-[#a17157] outline-none"/>
+        class="w-full border border-[var(--color-border)] rounded-lg px-4 py-2
+        focus:ring-2 focus:ring-[var(--color-primary-hover)] outline-none"/>
 
       <button
-        class="w-full bg-[#976346] hover:bg-[#a17157] text-white py-3 rounded-full text-sm tracking-widest uppercase transition">
+        class="w-full bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white py-3 rounded-full text-sm tracking-widest uppercase transition"
+        href="https://helloozc.github.io/chienglily/user-index.html">
         Sign In
       </button>
 
     </div>
 
     <!-- FOOTER -->
-    <p class="text-xs text-[#6B7280] text-center mt-6 font-serif">
+    <p class="text-xs text-[var(--color-muted)] text-center mt-6 font-serif">
       A day of love, laughter & happily ever after
     </p>
 
@@ -142,10 +148,8 @@ function showSlide(i) {
     s.style.opacity = idx === i ? "1" : "0";
   });
 
-  // update caption
   document.getElementById("caption").innerText = captions[i];
 
-  // update dots (PROGRESS STYLE)
   dots.forEach((d, idx) => {
     if (idx === i) {
       d.className =
