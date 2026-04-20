@@ -28,36 +28,50 @@ body {
 
 <!-- MOBILE CONTAINER -->
 <div class="w-full max-w-[430px] min-h-screen bg-white shadow-2xl overflow-hidden">
+    <!-- 🎠 CAROUSEL (UPGRADED) -->
+    <!-- ===================== -->
+    <div class="relative h-[55vh] overflow-hidden p-4">
 
-  <!-- ===================== -->
-  <!-- 🎠 CAROUSEL -->
-  <!-- ===================== -->
-  <div class="relative h-[55vh] overflow-hidden">
+    <!-- CAROUSEL CARD -->
+    <div class="relative w-full h-full rounded-3xl overflow-hidden shadow-lg">
 
-    <img class="slide absolute inset-0 w-full h-full object-cover opacity-100 transition-opacity duration-700"
-      src="assets/login-1.jpeg">
+        <img class="slide absolute inset-0 w-full h-full object-cover opacity-100 transition-opacity duration-700"
+        src="assets/login-1.jpeg">
 
-    <img class="slide absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-700"
-      src="assets/login-2.jpeg">    
+        <img class="slide absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-700"
+        src="assets/login-2.jpeg">
 
-    <img class="slide absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-700"
-      src="assets/login-3.jpeg">
+        <img class="slide absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-700"
+        src="assets/login-3.jpeg">
 
-    <!-- overlay -->
-    <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+        <!-- overlay -->
+        <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
 
-    <!-- caption -->
-    <p id="caption"
-      class="absolute bottom-16 w-full text-center text-white text-sm italic px-6">
-      A moment to cherish forever
-    </p>
+        <!-- caption -->
+        <p id="caption"
+        class="absolute bottom-16 w-full text-center text-white text-sm italic px-6 font-serif">
+        A moment to cherish forever
+        </p>
 
-    <!-- label -->
-    <div class="absolute top-5 left-1/2 -translate-x-1/2 bg-white/20 backdrop-blur-md border border-white/30 rounded-full px-4 py-1 text-white text-xs tracking-widest uppercase">
-      Wedding Day
+        <!-- floating label -->
+        <div class="absolute top-5 left-1/2 -translate-x-1/2 bg-white/20 backdrop-blur-md border border-white/30 rounded-full px-4 py-1 text-white text-xs tracking-widest uppercase">
+        Wedding Day
+        </div>
+
     </div>
 
-  </div>
+    <!-- ===================== -->
+    <!-- 🔵 PROGRESS DOTS (UPGRADED) -->
+    <!-- ===================== -->
+    <div class="absolute bottom-6 left-0 right-0 flex justify-center gap-2">
+
+        <div class="dot w-6 h-1 bg-white rounded-full opacity-100 transition-all duration-300"></div>
+        <div class="dot w-2 h-2 bg-white/50 rounded-full transition-all duration-300"></div>
+        <div class="dot w-2 h-2 bg-white/50 rounded-full transition-all duration-300"></div>
+
+    </div>
+
+    </div>
 
   <!-- ===================== -->
   <!-- 💍 LOGIN SECTION -->
@@ -116,6 +130,8 @@ body {
 <!-- ===================== -->
 <script>
 const slides = document.querySelectorAll(".slide");
+const dots = document.querySelectorAll(".dot");
+
 const captions = [
   "A moment to cherish forever",
   "Two hearts, one story",
@@ -129,7 +145,19 @@ function showSlide(i) {
     s.style.opacity = idx === i ? "1" : "0";
   });
 
+  // update caption
   document.getElementById("caption").innerText = captions[i];
+
+  // update dots (PROGRESS STYLE)
+  dots.forEach((d, idx) => {
+    if (idx === i) {
+      d.className =
+        "dot w-6 h-1 bg-white rounded-full opacity-100 transition-all duration-300";
+    } else {
+      d.className =
+        "dot w-2 h-2 bg-white/50 rounded-full transition-all duration-300";
+    }
+  });
 }
 
 function nextSlide() {
