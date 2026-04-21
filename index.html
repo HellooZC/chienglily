@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Great+Vibes&display=swap" rel="stylesheet">
+<!-- YOUR THEME -->
+<link rel="stylesheet" href="assets/css/theme.css">
+<link rel="stylesheet" href="assets/css/style.css">
+<title>Wedding Admin</title>
+
+<style>
+body {
+  font-family: system-ui, sans-serif;
+}
+.font-script {
+  font-family: 'Great Vibes', cursive;
+}
+.font-serif {
+  font-family: 'Cormorant Garamond', serif;
+}
+</style>
+</head>
+
+<body class="bg-[var(--color-bg)] flex justify-center">
+
+<!-- MOBILE CONTAINER -->
+<div class="w-full max-w-[430px] min-h-screen bg-[var(--color-bg)] shadow-2xl overflow-hidden"> 
+    <!-- APP WRAPPER -->
+    <div class="min-h-screen bg-[var(--color-bg)] flex flex-col">
+        <!-- PAGE CONTENT (dynamic area) -->
+        <div id="page-content" class="flex-1 pb-20">
+            <!-- Camera / Album / Profile content loads here -->
+        </div>
+        <!-- ===================== -->
+        <!-- 📱 BOTTOM NAV BAR -->
+        <!-- ===================== -->
+
+        <div class="fixed bottom-0 left-0 right-0 flex justify-center">
+        
+        <div class="w-full max-w-[430px] bg-[var(--color-bg)]/95 backdrop-blur-md border-t border-[var(--color-border)] flex justify-around items-center py-2 relative">
+
+            <!-- ================= ALBUM ================= -->
+            <button onclick="showPage('album')" 
+            class="flex flex-col items-center text-xs text-[var(--color-muted)] hover:text-[var(--color-primary)] transition">
+
+            <!-- icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+
+            Album
+            </button>
+
+            <!-- ================= CAMERA (CENTER FLOAT) ================= -->
+            <button onclick="generateSlideshow()"
+                class="absolute -top-7 left-1/2 -translate-x-1/2 
+                w-14 h-14 rounded-full 
+                bg-[var(--color-primary)] 
+                text-white shadow-lg 
+                flex items-center justify-center">
+
+                <!-- film / video icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor">
+
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14m-9 4h8a2 2 0 002-2V8a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+
+                </button>
+
+            <!-- ================= PROFILE ================= -->
+            <button onclick="showPage('profile')" 
+            class="flex flex-col items-center text-xs text-[var(--color-muted)] hover:text-[var(--color-primary)] transition">
+
+            <!-- icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M5.121 17.804A10.97 10.97 0 0112 15c2.21 0 4.253.657 5.879 1.804M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+
+            Profile
+            </button>
+
+        </div>
+        </div>
+    </div>
+</div>
+<canvas id="videoCanvas" class="hidden"></canvas>
+
+<div id="videoModal" class="fixed inset-0 hidden items-center justify-center z-50">
+  
+  <div class="absolute inset-0 bg-black/80" onclick="closeVideoPreview()"></div>
+
+  <div class="relative w-[90%] max-w-sm bg-black rounded-3xl p-3">
+
+    <video id="previewVideo" controls class="w-full rounded-2xl"></video>
+
+    <div class="flex gap-2 mt-3">
+      <a id="downloadBtn"
+         class="flex-1 py-2 text-center bg-[var(--color-primary)] text-white rounded-xl">
+        Download
+      </a>
+
+      <button onclick="closeVideoPreview()"
+        class="flex-1 py-2 border rounded-xl text-white">
+        Close
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<div id="renderLoading"
+     class="fixed inset-0 hidden items-center justify-center z-50 bg-black/80">
+
+  <div class="text-center text-white">
+
+    <div class="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-4"></div>
+
+    <p class="text-sm tracking-widest uppercase">
+      Generating Slideshow...
+    </p>
+
+    <p class="text-xs text-white/60 mt-2">
+      Please wait, this may take a moment
+    </p>
+
+  </div>
+</div>
+
+<!-- IMAGE MODAL (ADMIN VIEW MODE) -->
+<div id="imageModal" class="fixed inset-0 hidden items-center justify-center z-50">
+
+  <div id="modalBg" class="absolute inset-0 bg-black/80"></div>
+
+  <div class="relative w-[90%] max-w-sm bg-[var(--color-bg)] rounded-3xl p-4 shadow-2xl animate-fade">
+
+    <img id="modalImg"
+         class="w-full h-60 object-cover rounded-2xl mb-4">
+
+    <h3 id="modalCaption"
+        class="text-lg font-script text-[var(--color-text)] mb-2"></h3>
+
+    <p id="modalDesc"
+       class="text-sm text-[var(--color-muted)] leading-relaxed"></p>
+
+  </div>
+</div>
+
+<script>
+let mediaRecorder;
+let recordedChunks = [];
+let isSelectMode = false;
+// ==========================
+// MOCK DATA (replace later with API)
+// ==========================
+const adminData = [
+  {
+    user: "Ming Lee",
+    images: [
+      { src: "assets/login-1.jpeg", caption: "Nice", desc: "Moment" },
+      { src: "assets/login-2.jpeg", caption: "Love", desc: "Forever" },
+      { src: "assets/login-3.jpeg", caption: "Love", desc: "Forever" }
+    ]
+  },
+  {
+    user: "Zong Xuan",
+    images: [
+      { src: "assets/login-3.jpeg", caption: "Happy", desc: "Smile" },
+      { src: "assets/login-4.jpeg", caption: "Fun", desc: "Party" }
+    ]
+  }
+];
+
+let selectedImages = [];
+let currentPage = "album";
+function showPage(page) {
+    const content = document.getElementById("page-content");
+    currentPage = page;
+    if (page === "album") {
+    content.innerHTML = `
+        <div class="p-4">
+
+        <!-- HEADER -->
+        <div class="flex justify-between items-center mb-4">
+            <div>
+                <h2 class="text-2xl font-script">Admin Gallery</h2>
+                <p class="text-xs tracking-[0.3em] uppercase text-[var(--color-muted)]">
+                Review & Select Memories
+                </p>
+            </div>
+
+            <button onclick="toggleSelectMode()"
+                class="px-4 py-2 rounded-xl text-sm border border-[var(--color-border)]">
+                <span class="text-xs tracking-[0.3em] text-[var(--color-muted)]" id="modeText">Select</span>
+            </button>
+
+            </div>
+
+        <!-- USER GROUPS -->
+        <div id="adminGallery" class="space-y-6"></div>
+
+        </div>
+    `;
+
+    renderAdminGallery();
+    }
+
+    if (page === "profile") {
+
+    content.innerHTML = `
+        <div class="p-6 flex flex-col items-center text-center min-h-[80vh]">
+
+        <!-- ADMIN BADGE -->
+        <div class="w-24 h-24 rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center">
+            <span class="text-2xl font-script text-[var(--color-text)]">
+            ADM
+            </span>
+        </div>
+
+        <h2 class="mt-4 text-2xl font-script">Administrator</h2>
+
+        <p class="text-xs tracking-[0.25em] uppercase text-[var(--color-muted)] mt-1">
+            Wedding Manager
+        </p>
+
+        <div class="my-6 w-20 h-[1px] bg-[var(--color-border)] opacity-60"></div>
+
+        <!-- ACTIONS -->
+        <div class="w-full space-y-3">
+
+            <button class="w-full py-3 rounded-xl border text-sm">
+            Export Selected Images
+            </button>
+
+            <button class="w-full py-3 rounded-xl border text-sm">
+            Download Slideshow
+            </button>
+
+        </div>
+
+        <div class="flex-1"></div>
+
+        <a href="login.html"
+            class="mt-8 w-full py-3 rounded-2xl bg-[var(--color-primary)] text-white text-center">
+            Sign Out
+        </a>
+
+        </div>
+    `;
+    }
+}
+function renderAdminGallery() {
+  const container = document.getElementById("adminGallery");
+
+  container.innerHTML = adminData.map((group, userIndex) => `
+    
+    <div class="mt-10">
+      <!-- USER HEADER -->
+        <div class="flex justify-between items-end mb-3 px-1">
+
+        <div class="flex flex-col">
+            <!-- NAME -->
+            <h3 class="text-lg font-script text-[var(--color-text)] tracking-wide leading-none">
+            ${group.user}
+            </h3>
+
+            <!-- SUB TEXT -->
+            <p class="text-[10px] uppercase tracking-[0.3em] text-[var(--color-muted)] mt-1">
+            Guest Collection
+            </p>
+        </div>
+
+        </div>
+
+      <!-- GRID -->
+      <div class="grid grid-cols-3 gap-2">
+        ${group.images.map((img, imgIndex) => `
+          
+          <div class="relative group">
+            
+            <img src="${img.src}"
+              class="w-full h-28 object-cover rounded-xl cursor-pointer"
+              onclick="handleImageClick(${userIndex}, ${imgIndex}, this)">
+
+            <!-- overlay -->
+            <div class="absolute inset-0 bg-black/40 hidden items-center justify-center rounded-xl overlay">
+              <span class="text-white text-lg">✓</span>
+            </div>
+
+          </div>
+
+        `).join("")}
+      </div>
+
+    </div>
+
+  `).join("");
+}
+
+// ==========================
+// SELECT / DESELECT
+// ==========================
+function toggleSelect(userIndex, imgIndex, el) {
+  const overlay = el.parentElement.querySelector(".overlay"); // ✅ FIXED
+  const key = `${userIndex}-${imgIndex}`;
+
+  const exists = selectedImages.find(i => i.key === key);
+
+  if (exists) {
+    selectedImages = selectedImages.filter(i => i.key !== key);
+    overlay.classList.add("hidden");
+  } else {
+    selectedImages.push({
+      key,
+      ...adminData[userIndex].images[imgIndex]
+    });
+    overlay.classList.remove("hidden");
+    overlay.classList.add("flex");
+  }
+}
+
+function toggleSelectMode() {
+  isSelectMode = !isSelectMode;
+
+  document.getElementById("modeText").innerText =
+    isSelectMode ? "View" : "Select";
+
+  renderAdminGallery();
+}
+
+function handleImageClick(userIndex, imgIndex, el) {
+
+  const data = adminData[userIndex].images[imgIndex];
+
+  // MODE 1: VIEW MODE (show modal)
+  if (!isSelectMode) {
+    openImageModal(data);
+    return;
+  }
+
+  // MODE 2: SELECT MODE
+  toggleSelect(userIndex, imgIndex, el);
+}
+
+function openImageModal(data) {
+  const modal = document.getElementById("imageModal");
+
+  document.getElementById("modalImg").src = data.src;
+  document.getElementById("modalCaption").innerText = data.caption || "";
+  document.getElementById("modalDesc").innerText = data.desc || "";
+
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+}
+
+document.getElementById("modalBg").onclick = () => {
+  document.getElementById("imageModal").classList.add("hidden");
+};
+
+function selectAll(userIndex) {
+  adminData[userIndex].images.forEach((img, i) => {
+    const key = `${userIndex}-${i}`;
+
+    if (!selectedImages.find(x => x.key === key)) {
+      selectedImages.push({ key, ...img });
+    }
+  });
+
+  renderAdminGallery();
+}
+
+function clearSelection() {
+  selectedImages = [];
+  renderAdminGallery();
+}
+
+// ==========================
+// GENERATE SLIDESHOW
+// ==========================
+async function generateSlideshow() {
+    document.getElementById("renderLoading").classList.remove("hidden");
+    document.getElementById("renderLoading").classList.add("flex");
+    if (!selectedImages.length) {
+        alert("Select images first");
+        return;
+    }
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = 1280;
+    canvas.height = 720;
+
+    document.body.appendChild(canvas);
+    canvas.style.display = "none";
+
+    const stream = canvas.captureStream(30); // 30 FPS
+
+    const recorder = new MediaRecorder(stream, {
+        mimeType: "video/webm; codecs=vp9"
+    });
+
+    let chunks = [];
+
+    recorder.ondataavailable = e => chunks.push(e.data);
+
+    recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: "video/webm" });
+        const url = URL.createObjectURL(blob);
+
+        showVideoPreview(url);
+    };
+
+    recorder.start();
+
+    const drawImage = (imgObj, duration = 2000) => {
+        return new Promise(resolve => {
+        const img = new Image();
+        img.src = imgObj.src;
+
+        img.onload = () => {
+            let start = null;
+
+            function frame(time) {
+            if (!start) start = time;
+            const progress = time - start;
+
+            // BACKGROUND (romantic theme)
+            ctx.fillStyle = "#1a0f1f";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // IMAGE (cover style)
+            const scale = Math.min(
+            canvas.width / img.width,
+            canvas.height / img.height
+            );
+
+            const w = img.width * scale;
+            const h = img.height * scale;
+
+            const x = (canvas.width - w) / 2;
+            const y = (canvas.height - h) / 2;
+
+            // optional background blur fill (nice wedding style)
+            ctx.fillStyle = "#0f0a12";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // subtle glow effect
+            ctx.shadowColor = "rgba(255,255,255,0.08)";
+            ctx.shadowBlur = 40;
+
+            ctx.drawImage(img, x, y, w, h);
+
+            ctx.shadowBlur = 0;
+
+            ctx.drawImage(img, x, y, w, h);
+
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, "rgba(0,0,0,0.2)");
+            gradient.addColorStop(1, "rgba(0,0,0,0.6)");
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // DARK OVERLAY
+            ctx.fillStyle = "rgba(0,0,0,0.25)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // CAPTION
+            ctx.fillStyle = "#fff";
+            ctx.font = "bold 50px serif";
+            ctx.textAlign = "center";
+            ctx.fillText(imgObj.caption || "", canvas.width / 2, canvas.height - 120);
+
+            ctx.font = "28px sans-serif";
+            ctx.fillText(imgObj.desc || "", canvas.width / 2, canvas.height - 70);
+
+            if (progress < duration) {
+                requestAnimationFrame(frame);
+            } else {
+                resolve();
+            }
+            }
+
+            requestAnimationFrame(frame);
+        };
+        });
+    };
+
+    // PLAY SLIDESHOW SEQUENCE
+    for (let i = 0; i < selectedImages.length; i++) {
+        await drawImage(selectedImages[i]);
+    }
+    document.getElementById("renderLoading").classList.add("hidden");
+    document.getElementById("renderLoading").classList.remove("flex");
+    recorder.stop();
+}
+
+function showVideoPreview(url) {
+  const modal = document.getElementById("videoModal");
+  const video = document.getElementById("previewVideo");
+  const downloadBtn = document.getElementById("downloadBtn");
+
+  video.src = url;
+
+  downloadBtn.href = url;
+  downloadBtn.download = "wedding-slideshow.webm";
+
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+}
+
+function closeVideoPreview() {
+  const modal = document.getElementById("videoModal");
+  modal.classList.add("hidden");
+  modal.classList.remove("flex");
+}
+// INIT
+showPage("album");
+document.addEventListener("DOMContentLoaded", () => {
+  showPage("album");
+});
+</script>
+
+</body>
+</html>
