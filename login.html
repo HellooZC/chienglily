@@ -160,7 +160,7 @@ setInterval(nextSlide, 4000);
     collection, query, where, getDocs
   } from "./assets/js/firebase-config.js";
 
-  import { saveSession, getSession } from "./assets/js/auth-guard.js";
+  import { saveSession, getSession } from "./assets/js/auth.js";
 
   // If already logged in this tab/session, skip straight to the right page.
   const existing = getSession();
