@@ -1,0 +1,23 @@
+import {
+  storage, db, ensureSignedIn,
+  ref, uploadString, getDownloadURL,
+  collection, addDoc, serverTimestamp
+} from "./assets/js/firebase-config.js";
+import { requireAuth, logout } from "./assets/js/auth.js";
+
+// Kick anyone who isn't logged in straight back to login.html.
+const guest = requireAuth();
+// (requireAuth already redirects if guest is null, but we stop script
+// execution here too so nothing below tries to run during the redirect.)
+if (!guest) {
+  throw new Error("Not authenticated - redirecting to login.");
+}
+
+let currentUser = null;
+ensureSignedIn().then(user => { currentUser = user; });
+
+// Optional: show the guest's name somewhere in the UI, e.g.
+// document.getElementById("guestName").innerText = guest.name;
+//
+// Optional: wire up a logout button, e.g.
+// document.getElementById("logoutBtn").addEventListener("click", () => logout());

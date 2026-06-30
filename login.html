@@ -66,11 +66,9 @@ body {
 
     <!-- PROGRESS DOTS -->
     <div class="absolute bottom-6 left-0 right-0 flex justify-center gap-2">
-
       <div class="dot w-6 h-1 bg-white rounded-full opacity-100 transition-all duration-300"></div>
       <div class="dot w-2 h-2 bg-white/50 rounded-full transition-all duration-300"></div>
       <div class="dot w-2 h-2 bg-white/50 rounded-full transition-all duration-300"></div>
-
     </div>
 
   </div>
@@ -85,7 +83,6 @@ body {
       <p class="text-5xl text-[var(--color-text)] leading-tight font-script">
         Chieng & Lily
       </p>
-
       <p class="text-xs tracking-[0.25em] uppercase text-[var(--color-muted)]">
         Oct 03, 2026
       </p>
@@ -94,30 +91,26 @@ body {
     <!-- DIVIDER -->
     <div class="flex items-center gap-3 w-full">
       <div class="flex-1 h-px bg-[var(--color-border)]"></div>
-
       <span class="text-[var(--color-accent)] text-lg">❤</span>
-
       <div class="flex-1 h-px bg-[var(--color-border)]"></div>
     </div>
 
     <!-- LOGIN FORM -->
-    <div class="w-full space-y-4">
+    <form id="loginForm" class="w-full space-y-4">
 
-      <input type="text" placeholder="Name"
+      <input id="nameInput" type="text" placeholder="Your full name" autocomplete="name" required
         class="w-full border border-[var(--color-border)] rounded-lg px-4 py-2
         focus:ring-2 focus:ring-[var(--color-primary-hover)] outline-none"/>
 
-      <input type="password" placeholder="Password"
-        class="w-full border border-[var(--color-border)] rounded-lg px-4 py-2
-        focus:ring-2 focus:ring-[var(--color-primary-hover)] outline-none"/>
+      <!-- error message, hidden by default -->
+      <p id="loginError" class="hidden text-sm text-red-500 text-center"></p>
 
-        <a
-        href="https://helloozc.github.io/chienglily/user-index.html"
-        class="w-full block text-center bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white py-3 rounded-full text-sm tracking-widest uppercase transition">
+      <button id="signInBtn" type="submit"
+        class="w-full block text-center bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white py-3 rounded-full text-sm tracking-widest uppercase transition disabled:opacity-50">
         Sign In
-        </a>
+      </button>
 
-    </div>
+    </form>
 
     <!-- FOOTER -->
     <p class="text-xs text-[var(--color-muted)] text-center mt-6 font-serif">
@@ -167,6 +160,42 @@ function nextSlide() {
 }
 
 setInterval(nextSlide, 4000);
+</script>
+
+<!-- ===================== -->
+<!-- 🔐 LOGIN LOGIC -->
+<!-- ===================== -->
+<script type="module">
+  import { loginUser, getCurrentUser } from "./assets/js/auth.js";
+
+  // If already logged in this session, skip straight through.
+  if (getCurrentUser()) {
+    window.location.href = "user-index.html";
+  }
+
+  const form = document.getElementById("loginForm");
+  const nameInput = document.getElementById("nameInput");
+  const errorEl = document.getElementById("loginError");
+  const signInBtn = document.getElementById("signInBtn");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    errorEl.classList.add("hidden");
+    signInBtn.disabled = true;
+    signInBtn.innerText = "Checking...";
+
+    const result = await loginUser(nameInput.value);
+
+    if (result.ok) {
+      window.location.href = "user-index.html";
+    } else {
+      errorEl.innerText = result.error;
+      errorEl.classList.remove("hidden");
+      signInBtn.disabled = false;
+      signInBtn.innerText = "Sign In";
+    }
+  });
 </script>
 
 </body>

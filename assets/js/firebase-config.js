@@ -1,5 +1,5 @@
 // ==========================
-// FIREBASE INIT (shared by admin + user pages)
+// FIREBASE INIT (shared by login + admin + user pages)
 // ==========================
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -7,8 +7,12 @@ import {
   getFirestore,
   collection,
   addDoc,
+  setDoc,
+  getDoc,
+  getDocs,
   onSnapshot,
   query,
+  where,
   orderBy,
   serverTimestamp,
   deleteDoc,
@@ -29,6 +33,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 // 🔴 PASTE YOUR CONFIG FROM THE FIREBASE CONSOLE HERE
+// Firebase Console > Project Settings > General > "Your apps" > SDK setup and config
 const firebaseConfig = {
   apiKey: "YOUR_API_KEY",
   authDomain: "YOUR_PROJECT.firebaseapp.com",
@@ -44,7 +49,7 @@ const storage = getStorage(app);
 const auth = getAuth(app);
 
 // Make sure every visitor (guest or admin) has an anonymous identity
-// before they try to read/write anything.
+// before they try to read/write anything (Storage/Firestore rules require this).
 function ensureSignedIn() {
   return new Promise((resolve) => {
     onAuthStateChanged(auth, (user) => {
@@ -64,6 +69,6 @@ function ensureSignedIn() {
 
 export {
   db, storage, auth, ensureSignedIn,
-  collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, deleteDoc, doc,
+  collection, addDoc, setDoc, getDoc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp, deleteDoc, doc,
   ref, uploadString, uploadBytes, getDownloadURL, deleteObject
 };

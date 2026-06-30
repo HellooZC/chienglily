@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Seed Test Guests (run once, then delete this file)</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 480px; margin: 60px auto; padding: 0 20px; }
+  button { padding: 12px 20px; font-size: 14px; cursor: pointer; }
+  pre { background: #f4f4f4; padding: 12px; border-radius: 8px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+
+<h2>Seed Dummy Guests</h2>
+<p>This writes a handful of test names into the <code>guests</code> collection in Firestore so you can test the login flow. Run it once, check Firestore console to confirm, then <strong>delete this file</strong> (don't ship it).</p>
+
+<button id="seedBtn">Seed test guests</button>
+<pre id="log">Ready.</pre>
+
+<script type="module">
+  import {
+    db, ensureSignedIn,
+    collection, doc, setDoc
+  } from "./assets/js/firebase-config.js";
+
+  const log = document.getElementById("log");
+  const btn = document.getElementById("seedBtn");
+
+  // Add / remove names here as needed.
+  const testGuests = [
+    { name: "Chieng Lim" },
+    { name: "Lily Tan" },
+    { name: "John Wong" },
+    { name: "Mary Lee" },
+    { name: "Test Guest" }
+  ];
+
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    log.textContent = "Signing in...\n";
+
+    await ensureSignedIn();
+
+    for (const g of testGuests) {
+      const nameKey = g.name.trim().toLowerCase();
+      // Use a slugified name as the doc ID so re-running this is safe (no duplicates).
+      const docId = nameKey.replace(/[^a-z0-9]+/g, "-");
+
+      try {
+        await setDoc(doc(db, "guests", docId), {
+          name: g.name,
+          nameKey: nameKey,
+          createdAt: new Date().toISOString()
+        });
+        log.textContent += `✔ Added "${g.name}"\n`;
+      } catch (err) {
+        log.textContent += `✘ Failed "${g.name}": ${err.message}\n`;
+      }
+    }
+
+    log.textContent += "\nDone. Go test login.html with one of these names.";
+    btn.disabled = false;
+  });
+</script>
+
+</body>
+</html>
