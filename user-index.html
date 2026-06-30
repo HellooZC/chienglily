@@ -157,7 +157,9 @@ body {
 </div>
 
 <script type="module">
+import { requireSession, clearSession } from "./assets/js/auth-guard.js";
 
+const session = requireSession("guest");
 // ==========================
 // FIREBASE
 // ==========================

@@ -3,19 +3,26 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Seed Test Guests (run once, then delete this file)</title>
+<title>Seed Users (run once, then delete this file)</title>
 <style>
   body { font-family: system-ui, sans-serif; max-width: 480px; margin: 60px auto; padding: 0 20px; }
   button { padding: 12px 20px; font-size: 14px; cursor: pointer; }
   pre { background: #f4f4f4; padding: 12px; border-radius: 8px; white-space: pre-wrap; }
+  table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #eee; }
 </style>
 </head>
 <body>
 
-<h2>Seed Dummy Guests</h2>
-<p>This writes a handful of test names into the <code>guests</code> collection in Firestore so you can test the login flow. Run it once, check Firestore console to confirm, then <strong>delete this file</strong> (don't ship it).</p>
+<h2>Seed Users</h2>
+<p>Writes test accounts (name, password, role) into the <code>users</code> collection so you can test login. Run it once, check the Firestore console to confirm, then <strong>delete this file</strong> before going live — it currently writes with no real protection.</p>
 
-<button id="seedBtn">Seed test guests</button>
+<table>
+  <thead><tr><th>Name</th><th>Password</th><th>Role</th></tr></thead>
+  <tbody id="previewTable"></tbody>
+</table>
+
+<button id="seedBtn">Seed users</button>
 <pre id="log">Ready.</pre>
 
 <script type="module">
@@ -24,17 +31,25 @@
     collection, doc, setDoc
   } from "./assets/js/firebase-config.js";
 
+  // Edit this list as needed. One admin, rest are guests.
+  const testUsers = [
+    { name: "Chieng Lim",  password: "admin123", role: "admin" },
+    { name: "Lily Tan",    password: "admin123", role: "admin" },
+    { name: "John Wong",   password: "guest123",  role: "guest" },
+    { name: "Mary Lee",    password: "guest123",  role: "guest" },
+    { name: "Test Guest",  password: "guest123",  role: "guest" }
+  ];
+
+  // preview table
+  const previewTable = document.getElementById("previewTable");
+  testUsers.forEach(u => {
+    const row = document.createElement("tr");
+    row.innerHTML = `<td>${u.name}</td><td>${u.password}</td><td>${u.role}</td>`;
+    previewTable.appendChild(row);
+  });
+
   const log = document.getElementById("log");
   const btn = document.getElementById("seedBtn");
-
-  // Add / remove names here as needed.
-  const testGuests = [
-    { name: "Chieng Lim" },
-    { name: "Lily Tan" },
-    { name: "John Wong" },
-    { name: "Mary Lee" },
-    { name: "Test Guest" }
-  ];
 
   btn.addEventListener("click", async () => {
     btn.disabled = true;
@@ -42,24 +57,26 @@
 
     await ensureSignedIn();
 
-    for (const g of testGuests) {
-      const nameKey = g.name.trim().toLowerCase();
-      // Use a slugified name as the doc ID so re-running this is safe (no duplicates).
+    for (const u of testUsers) {
+      const nameKey = u.name.trim().toLowerCase();
+      // Slugified name as doc ID so re-running this is safe (no duplicates, overwrites existing).
       const docId = nameKey.replace(/[^a-z0-9]+/g, "-");
 
       try {
-        await setDoc(doc(db, "guests", docId), {
-          name: g.name,
+        await setDoc(doc(db, "users", docId), {
+          name: u.name,
           nameKey: nameKey,
+          password: u.password,
+          role: u.role,
           createdAt: new Date().toISOString()
         });
-        log.textContent += `✔ Added "${g.name}"\n`;
+        log.textContent += `✔ Added "${u.name}" (${u.role})\n`;
       } catch (err) {
-        log.textContent += `✘ Failed "${g.name}": ${err.message}\n`;
+        log.textContent += `✘ Failed "${u.name}": ${err.message}\n`;
       }
     }
 
-    log.textContent += "\nDone. Go test login.html with one of these names.";
+    log.textContent += "\nDone. Go test login.html with one of these names/passwords.";
     btn.disabled = false;
   });
 </script>

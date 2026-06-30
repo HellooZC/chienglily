@@ -10,6 +10,8 @@ import {
   setDoc,
   onSnapshot,
   query,
+  where,        // ADD
+  getDocs,      // ADD
   orderBy,
   serverTimestamp,
   deleteDoc,
@@ -67,6 +69,6 @@ function ensureSignedIn() {
 
 export {
   db, storage, auth, ensureSignedIn,
-  collection, addDoc, setDoc, onSnapshot, query, orderBy, serverTimestamp, deleteDoc, doc,
+  collection, addDoc, setDoc, onSnapshot, query, where, getDocs, orderBy, serverTimestamp, deleteDoc, doc,
   ref, uploadString, uploadBytes, getDownloadURL, deleteObject
 };
