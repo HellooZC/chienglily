@@ -32,12 +32,13 @@ import {
 // 🔴 PASTE YOUR CONFIG FROM THE FIREBASE CONSOLE HERE
 // Firebase Console > Project Settings > General > "Your apps" > SDK setup and config
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyCkIc46cTB07iK3nOav6V-RzHxTHpmDKZM",
+  authDomain: "chieng-and-lily.firebaseapp.com",
+  projectId: "chieng-and-lily",
+  storageBucket: "chieng-and-lily.firebasestorage.app",
+  messagingSenderId: "712601273441",
+  appId: "1:712601273441:web:dc5f7e38dcc7f9e9309620",
+  measurementId: "G-MGY2DBTK0P"
 };
 
 const app = initializeApp(firebaseConfig);
