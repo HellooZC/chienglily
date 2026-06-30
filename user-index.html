@@ -147,7 +147,7 @@ body {
         Cancel
       </button>
 
-      <button onclick="savePhoto()"
+      <button id="saveBtn" onclick="savePhoto()"
         class="flex-1 py-2 rounded-xl bg-[var(--color-primary)] text-white text-sm">
         Save
       </button>
@@ -156,7 +156,21 @@ body {
   </div>
 </div>
 
-<script>
+<script type="module">
+
+// ==========================
+// FIREBASE
+// ==========================
+
+import {
+  storage, db, ensureSignedIn,
+  ref, uploadString, getDownloadURL,
+  collection, addDoc, serverTimestamp
+} from "./assets/js/firebase-config.js";
+
+let currentUser = null;
+ensureSignedIn().then(user => { currentUser = user; });
+
 // ==========================
 // GALLERY STATE
 // ==========================
@@ -438,7 +452,7 @@ function showPage(page) {
         <div class="flex-1"></div>
 
         <!-- SIGN OUT BUTTON -->
-        <a href="https://helloozc.github.io/chienglily/login.html"
+        <a href="login.html"
             class="mt-8 w-full max-w-sm py-3 rounded-2xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium shadow-lg active:scale-95 transition block text-center">
             Sign Out
         </a>
@@ -553,13 +567,54 @@ function closePreview() {
   modal.classList.remove("flex");
 }
 
-function savePhoto() {
-  const caption = document.getElementById("captionInput").value;
-  const desc = document.getElementById("descInput").value;
+// ==========================
+// SAVE PHOTO -> FIREBASE STORAGE + FIRESTORE
+// ==========================
+async function savePhoto() {
+  const caption = document.getElementById("captionInput").value.trim();
+  const desc = document.getElementById("descInput").value.trim();
 
-  addToAlbum(tempImageData, caption, desc);
+  if (!tempImageData) return;
 
-  closePreview();
+  const saveBtn = document.getElementById("saveBtn");
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.innerText = "Uploading...";
+  }
+
+  try {
+    const filename = `uploads/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
+    const storageRef = ref(storage, filename);
+
+    // tempImageData is a base64 data URL from canvas or file reader
+    await uploadString(storageRef, tempImageData, "data_url");
+
+    const downloadURL = await getDownloadURL(storageRef);
+
+    await addDoc(collection(db, "photos"), {
+      src: downloadURL,
+      storagePath: filename,
+      caption: caption || "",
+      desc: desc || "",
+      uploadedBy: currentUser ? currentUser.uid : "unknown",
+      userLabel: "Guest",
+      createdAt: serverTimestamp()
+    });
+
+    // show it immediately in this guest's own album view too
+    addToAlbum(downloadURL, caption, desc);
+
+    closePreview();
+
+  } catch (err) {
+    console.error("Upload failed:", err);
+    alert("Upload failed, please try again.");
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerText = "Save";
+    }
+  }
 }
 
 function addToAlbum(src, caption, desc) {
@@ -584,6 +639,17 @@ function addToAlbum(src, caption, desc) {
 
   grid.prepend(div);
 }
+
+// ==========================
+// EXPOSE TO INLINE onclick HANDLERS
+// (required because this script is type="module")
+// ==========================
+window.showPage = showPage;
+window.savePhoto = savePhoto;
+window.closePreview = closePreview;
+window.takePhoto = takePhoto;
+window.flipCamera = flipCamera;
+window.uploadImage = uploadImage;
 </script>
 <style>
 .animate-fade {
@@ -597,5 +663,3 @@ function addToAlbum(src, caption, desc) {
 </style>
 </body>
 </html>
-
-

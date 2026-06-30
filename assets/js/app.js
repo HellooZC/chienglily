@@ -1,25 +1,13 @@
 
 // ==========================
-// MOCK DATA
+// FIREBASE
 // ==========================
 
-const adminData = [
-  {
-    user: "Ming Lee",
-    images: [
-      { src: "assets/login-1.jpeg", caption: "Nice", desc: "Moment" },
-      { src: "assets/login-2.jpeg", caption: "Love", desc: "Forever" },
-      { src: "assets/login-3.jpeg", caption: "Together", desc: "Wedding Day" }
-    ]
-  },
-  {
-    user: "Zong Xuan",
-    images: [
-      { src: "assets/login-3.jpeg", caption: "Smile", desc: "Happy" },
-      { src: "assets/login-4.jpeg", caption: "Party", desc: "Fun Night" }
-    ]
-  }
-];
+import {
+  db, ensureSignedIn,
+  collection, onSnapshot, query, orderBy, deleteDoc, doc,
+  storage, ref, deleteObject
+} from "./firebase-config.js";
 
 // ==========================
 // STATE
@@ -32,6 +20,26 @@ let isSelectMode = false;
 let tempSelection = [];
 
 let collections = [];
+
+let adminPhotos = []; // live list from Firestore, replaces old mock adminData
+
+// ==========================
+// LIVE DATA LISTENER
+// ==========================
+
+ensureSignedIn().then(() => {
+  const q = query(collection(db, "photos"), orderBy("createdAt", "desc"));
+
+  onSnapshot(q, (snapshot) => {
+    adminPhotos = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    if (currentPage === "album") {
+      renderAdminGallery();
+    }
+  }, (err) => {
+    console.error("Failed to load photos:", err);
+  });
+});
 
 // ==========================
 // PAGE
@@ -169,73 +177,72 @@ function showPage(page) {
 }
 
 // ==========================
-// GALLERY
+// GALLERY (FLAT, FROM FIRESTORE)
 // ==========================
 
 function renderAdminGallery() {
 
   const container = document.getElementById("adminGallery");
 
-  container.innerHTML = adminData.map((group, userIndex) => `
+  if (!container) return;
 
-    <div>
+  if (!adminPhotos.length) {
+    container.innerHTML = `
+      <p class="text-center text-sm text-[var(--color-muted)] py-10">
+        No photos uploaded yet
+      </p>
+    `;
+    return;
+  }
 
-      <div class="mb-3">
+  container.innerHTML = `
+    <div class="grid grid-cols-3 gap-2">
 
-        <h3 class="text-lg font-script text-[var(--color-text)]">
-          ${group.user}
-        </h3>
+      ${adminPhotos.map((img, index) => {
 
-        <p class="text-[10px] uppercase tracking-[0.3em] text-[var(--color-muted)]">
-          Guest Collection
-        </p>
+        const active = tempSelection.find(i => i.key === img.id);
 
-      </div>
+        return `
+          <div class="relative">
 
-      <div class="grid grid-cols-3 gap-2">
+            <img src="${img.src}"
+              class="w-full h-28 object-cover rounded-xl cursor-pointer"
+              onclick="handleImageClick(${index}, this)">
 
-        ${group.images.map((img, imgIndex) => {
+            <div class="absolute inset-0
+                        ${active ? 'flex' : 'hidden'}
+                        items-center justify-center
+                        bg-black/40 rounded-xl overlay">
 
-          const key = `${userIndex}-${imgIndex}`;
-
-          const active = tempSelection.find(i => i.key === key);
-
-          return `
-            <div class="relative">
-
-              <img src="${img.src}"
-                class="w-full h-28 object-cover rounded-xl cursor-pointer"
-                onclick="handleImageClick(${userIndex}, ${imgIndex}, this)">
-
-              <div class="absolute inset-0
-                          ${active ? 'flex' : 'hidden'}
-                          items-center justify-center
-                          bg-black/40 rounded-xl overlay">
-
-                <span class="text-white text-xl">
-                  ✓
-                </span>
-
-              </div>
+              <span class="text-white text-xl">
+                ✓
+              </span>
 
             </div>
-          `;
-        }).join("")}
 
-      </div>
+            ${!isSelectMode ? `
+              <button
+                onclick="event.stopPropagation(); deletePhoto('${img.id}', '${img.storagePath || ''}')"
+                class="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/70 text-white text-xs flex items-center justify-center">
+                ✕
+              </button>
+            ` : ""}
+
+          </div>
+        `;
+      }).join("")}
 
     </div>
-
-  `).join("");
+  `;
 }
 
 // ==========================
 // IMAGE CLICK
 // ==========================
 
-function handleImageClick(userIndex, imgIndex, el) {
+function handleImageClick(index, el) {
 
-  const data = adminData[userIndex].images[imgIndex];
+  const data = adminPhotos[index];
 
   // VIEW MODE
   if (!isSelectMode) {
@@ -244,32 +251,30 @@ function handleImageClick(userIndex, imgIndex, el) {
   }
 
   // SELECT MODE
-  toggleTempSelection(userIndex, imgIndex, el);
+  toggleTempSelection(data, el);
 }
 
 // ==========================
 // TEMP SELECTION
 // ==========================
 
-function toggleTempSelection(userIndex, imgIndex, el) {
+function toggleTempSelection(data, el) {
 
   const overlay = el.parentElement.querySelector(".overlay");
 
-  const key = `${userIndex}-${imgIndex}`;
-
-  const exists = tempSelection.find(i => i.key === key);
+  const exists = tempSelection.find(i => i.key === data.id);
 
   if (exists) {
 
-    tempSelection = tempSelection.filter(i => i.key !== key);
+    tempSelection = tempSelection.filter(i => i.key !== data.id);
 
     overlay.classList.add("hidden");
 
   } else {
 
     tempSelection.push({
-      key,
-      ...adminData[userIndex].images[imgIndex]
+      key: data.id,
+      ...data
     });
 
     overlay.classList.remove("hidden");
@@ -389,6 +394,34 @@ function removeCollection(index) {
 }
 
 // ==========================
+// DELETE PHOTO (Firestore + Storage)
+// ==========================
+
+async function deletePhoto(photoId, storagePath) {
+
+  if (!confirm("Delete this photo permanently?")) return;
+
+  try {
+
+    await deleteDoc(doc(db, "photos", photoId));
+
+    if (storagePath) {
+      await deleteObject(ref(storage, storagePath)).catch(err => {
+        // file may already be gone, don't block on it
+        console.warn("Storage file delete warning:", err);
+      });
+    }
+
+    // also remove from collections if present
+    collections = collections.filter(img => img.id !== photoId);
+
+  } catch (err) {
+    console.error("Delete failed:", err);
+    alert("Failed to delete photo.");
+  }
+}
+
+// ==========================
 // IMAGE MODAL
 // ==========================
 
@@ -481,6 +514,8 @@ function renderFrame(ctx, canvas, imgObj) {
 
     const img = new Image();
 
+    img.crossOrigin = "anonymous";
+
     img.src = imgObj.src;
 
     img.onload = () => {
@@ -555,6 +590,8 @@ function renderFrame(ctx, canvas, imgObj) {
 
       requestAnimationFrame(animate);
     };
+
+    img.onerror = () => resolve(); // don't hang the whole export on one bad image
   });
 }
 
@@ -587,6 +624,20 @@ function closeVideoPreview() {
 
   document.getElementById("videoModal").classList.remove("flex");
 }
+
+// ==========================
+// EXPOSE TO INLINE onclick HANDLERS
+// (required because this file is loaded as a module)
+// ==========================
+
+window.showPage = showPage;
+window.handleImageClick = handleImageClick;
+window.toggleSelectMode = toggleSelectMode;
+window.handleCollectionButton = handleCollectionButton;
+window.removeCollection = removeCollection;
+window.deletePhoto = deletePhoto;
+window.generateSlideshow = generateSlideshow;
+window.closeVideoPreview = closeVideoPreview;
 
 // ==========================
 // INIT
