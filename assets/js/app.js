@@ -1,4 +1,3 @@
-
 // ==========================
 // FIREBASE
 // ==========================
@@ -10,19 +9,19 @@ import {
 } from "./firebase-config.js";
 import { requireSession, clearSession } from "./auth.js";
 const session = requireSession("admin");
+
 // ==========================
 // STATE
 // ==========================
 
 let currentPage = "album";
 
-let isSelectMode = false;
+let adminPhotos = []; // live list from Firestore
 
-let tempSelection = [];
-
-let collections = [];
-
-let adminPhotos = []; // live list from Firestore, replaces old mock adminData
+// slideshow state
+let slideshowIndex = 0;
+let slideshowTimer = null;
+let slideshowPlaying = true;
 
 // ==========================
 // LIVE DATA LISTENER
@@ -61,27 +60,14 @@ function showPage(page) {
     content.innerHTML = `
       <div class="p-4">
 
-        <div class="flex justify-between items-center mb-6">
+        <div class="mb-6">
+          <h2 class="text-2xl font-script">
+            Admin Gallery
+          </h2>
 
-          <div>
-            <h2 class="text-2xl font-script">
-              Admin Gallery
-            </h2>
-
-            <p class="text-xs tracking-[0.3em] uppercase text-[var(--color-muted)]">
-              Review & Select Memories
-            </p>
-          </div>
-
-          <button onclick="toggleSelectMode()"
-            class="px-4 py-2 rounded-xl border border-[var(--color-border)] text-xs tracking-[0.2em] uppercase">
-
-            <span id="modeText">
-              ${isSelectMode ? "View" : "Select"}
-            </span>
-
-          </button>
-
+          <p class="text-xs tracking-[0.3em] uppercase text-[var(--color-muted)]">
+            All Guest Memories
+          </p>
         </div>
 
         <div id="adminGallery" class="space-y-8"></div>
@@ -90,63 +76,6 @@ function showPage(page) {
     `;
 
     renderAdminGallery();
-  }
-
-  // ==========================
-  // COLLECTION PAGE
-  // ==========================
-
-  if (page === "collections") {
-
-    content.innerHTML = `
-      <div class="p-4">
-
-        <div class="text-center mb-6">
-
-          <h2 class="text-3xl font-script">
-            Slideshow Collection
-          </h2>
-
-          <p class="text-xs uppercase tracking-[0.3em] text-[var(--color-muted)] mt-2">
-            Ready For Export
-          </p>
-
-        </div>
-
-        <div class="grid grid-cols-2 gap-3">
-
-          ${collections.map((img, index) => `
-            
-            <div class="relative">
-
-              <img src="${img.imageUrl}"
-                class="w-full h-44 object-cover rounded-2xl">
-
-              <button
-                onclick="removeCollection(${index})"
-                class="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/70 text-white text-sm">
-                ✕
-              </button>
-
-            </div>
-
-          `).join("")}
-
-        </div>
-
-        ${collections.length ? `
-          <button onclick="generateSlideshow()"
-            class="w-full mt-6 py-4 rounded-2xl bg-[var(--color-primary)] text-white">
-            Export Slideshow
-          </button>
-        ` : `
-          <div class="text-center py-20 text-[var(--color-muted)] text-sm">
-            No images in collection
-          </div>
-        `}
-
-      </div>
-    `;
   }
 
   // ==========================
@@ -210,39 +139,21 @@ function renderAdminGallery() {
   container.innerHTML = `
     <div class="grid grid-cols-3 gap-2">
 
-      ${adminPhotos.map((img, index) => {
+      ${adminPhotos.map((img, index) => `
+        <div class="relative">
 
-        const active = tempSelection.find(i => i.key === img.id);
+          <img src="${img.imageUrl}"
+            class="w-full h-28 object-cover rounded-xl cursor-pointer"
+            onclick="handleImageClick(${index})">
 
-        return `
-          <div class="relative">
+          <button
+            onclick="event.stopPropagation(); deletePhoto('${img.id}', '${img.storagePath || ''}')"
+            class="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/70 text-white text-xs flex items-center justify-center">
+            ✕
+          </button>
 
-            <img src="${img.imageUrl}"
-              class="w-full h-28 object-cover rounded-xl cursor-pointer"
-              onclick="handleImageClick(${index}, this)">
-
-            <div class="absolute inset-0
-                        ${active ? 'flex' : 'hidden'}
-                        items-center justify-center
-                        bg-black/40 rounded-xl overlay">
-
-              <span class="text-white text-xl">
-                ✓
-              </span>
-
-            </div>
-
-            ${!isSelectMode ? `
-              <button
-                onclick="event.stopPropagation(); deletePhoto('${img.id}', '${img.storagePath || ''}')"
-                class="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/70 text-white text-xs flex items-center justify-center">
-                ✕
-              </button>
-            ` : ""}
-
-          </div>
-        `;
-      }).join("")}
+        </div>
+      `).join("")}
 
     </div>
   `;
@@ -252,157 +163,8 @@ function renderAdminGallery() {
 // IMAGE CLICK
 // ==========================
 
-function handleImageClick(index, el) {
-
-  const data = adminPhotos[index];
-
-  // VIEW MODE
-  if (!isSelectMode) {
-    openImageModal(data);
-    return;
-  }
-
-  // SELECT MODE
-  toggleTempSelection(data, el);
-}
-
-// ==========================
-// TEMP SELECTION
-// ==========================
-
-function toggleTempSelection(data, el) {
-
-  const overlay = el.parentElement.querySelector(".overlay");
-
-  const exists = tempSelection.find(i => i.key === data.id);
-
-  if (exists) {
-
-    tempSelection = tempSelection.filter(i => i.key !== data.id);
-
-    overlay.classList.add("hidden");
-
-  } else {
-
-    tempSelection.push({
-      key: data.id,
-      ...data
-    });
-
-    overlay.classList.remove("hidden");
-    overlay.classList.add("flex");
-  }
-}
-
-// ==========================
-// TOGGLE MODE
-// ==========================
-function toggleSelectMode() {
-
-  isSelectMode = !isSelectMode;
-
-  // IF SWITCHING BACK TO VIEW MODE
-  // CLEAR TEMP SELECTION
-  if (!isSelectMode) {
-    tempSelection = [];
-  }
-
-  // UPDATE BUTTON TEXT
-  const modeText = document.getElementById("modeText");
-
-  if (modeText) {
-    modeText.innerText = isSelectMode
-      ? "View"
-      : "Select";
-  }
-
-  // RERENDER GALLERY
-  renderAdminGallery();
-
-  // UPDATE COLLECTION BUTTON
-  updateCollectionButton();
-}
-
-// ==========================
-// COLLECTION BUTTON
-// ==========================
-
-function updateCollectionButton() {
-
-  const icon = document.getElementById("collectionIcon");
-
-  // SELECT MODE
-  if (isSelectMode) {
-
-    icon.innerHTML = `
-      <svg xmlns="http://www.w3.org/2000/svg"
-        class="w-6 h-6"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor">
-
-        <path stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="1.5"
-          d="M12 4v16m8-8H4"/>
-      </svg>
-    `;
-
-  } else {
-
-    icon.innerHTML = `
-      <svg xmlns="http://www.w3.org/2000/svg"
-        class="w-6 h-6"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor">
-
-        <path stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="1.5"
-          d="M3 7a2 2 0 012-2h3l2 2h9a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
-      </svg>
-    `;
-  }
-}
-
-// ==========================
-// COLLECTION BUTTON ACTION
-// ==========================
-
-function handleCollectionButton() {
-
-  // ADD TO COLLECTION
-  if (isSelectMode) {
-
-    collections.push(...tempSelection);
-
-    tempSelection = [];
-
-    isSelectMode = false;
-
-    renderAdminGallery();
-
-    updateCollectionButton();
-
-    alert("Added to collection");
-
-    return;
-  }
-
-  // OPEN COLLECTION PAGE
-  showPage("collections");
-}
-
-// ==========================
-// REMOVE COLLECTION
-// ==========================
-
-function removeCollection(index) {
-
-  collections.splice(index, 1);
-
-  showPage("collections");
+function handleImageClick(index) {
+  openImageModal(adminPhotos[index]);
 }
 
 // ==========================
@@ -423,9 +185,6 @@ async function deletePhoto(photoId, storagePath) {
         console.warn("Storage file delete warning:", err);
       });
     }
-
-    // also remove from collections if present
-    collections = collections.filter(img => img.id !== photoId);
 
   } catch (err) {
     console.error("Delete failed:", err);
@@ -457,184 +216,115 @@ document.getElementById("modalBg").onclick = () => {
 
   document.getElementById("imageModal").classList.remove("flex");
 };
-
 // ==========================
-// GENERATE VIDEO
+// SLIDESHOW (middle button)
 // ==========================
 
-async function generateSlideshow() {
+const SLIDESHOW_INTERVAL = 3500;
+const SLIDESHOW_TRANSITION = 350; // must match CSS transition duration
 
-  if (!collections.length) {
-    alert("Collection is empty");
+function openSlideshow() {
+
+  if (!adminPhotos.length) {
+    alert("No photos to show yet.");
     return;
   }
 
-  document.getElementById("renderLoading").classList.remove("hidden");
-  document.getElementById("renderLoading").classList.add("flex");
+  slideshowIndex = 0;
+  slideshowPlaying = true;
 
-  const canvas = document.createElement("canvas");
+  const modal = document.getElementById("slideshowModal");
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
 
-  const ctx = canvas.getContext("2d");
+  renderSlideshowFrame(); // initial render, no animation
+  startSlideshowTimer();
+}
 
-  canvas.width = 1280;
-  canvas.height = 720;
+function renderSlideshowFrame() {
 
-  const stream = canvas.captureStream(30);
+  const photo = adminPhotos[slideshowIndex];
+  if (!photo) return;
 
-  const recorder = new MediaRecorder(stream, {
-    mimeType: "video/webm; codecs=vp9"
-  });
+  document.getElementById("slideshowImg").src = photo.imageUrl;
+  document.getElementById("slideshowTitle").innerText = photo.title || "";
+  document.getElementById("slideshowCaption").innerText = photo.caption || "";
 
-  let chunks = [];
+  document.getElementById("slideshowCounter").innerText =
+    `${slideshowIndex + 1} / ${adminPhotos.length}`;
 
-  recorder.ondataavailable = e => chunks.push(e.data);
+  updatePlayIcon();
+}
 
-  recorder.onstop = () => {
+function updatePlayIcon() {
+  const playIcon = document.getElementById("slideshowPlayIcon");
+  if (!playIcon) return;
 
-    const blob = new Blob(chunks, {
-      type: "video/webm"
-    });
+  playIcon.innerHTML = slideshowPlaying
+    ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 9v6m4-6v6"/>` // pause bars
+    : `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.752 11.168l-6.518-3.76A1 1 0 007 8.24v7.52a1 1 0 001.234.972l6.518-3.76a1 1 0 000-1.804z"/>`; // play triangle
+}
 
-    const url = URL.createObjectURL(blob);
+// direction: "next" | "prev" | null (null = no animation, used on open)
+function goToSlide(newIndex, direction) {
 
-    document.getElementById("renderLoading").classList.add("hidden");
+  const inner = document.getElementById("slideshowCardInner");
 
-    showVideoPreview(url);
-  };
-
-  recorder.start();
-
-  for (let i = 0; i < collections.length; i++) {
-
-    await renderFrame(
-      ctx,
-      canvas,
-      collections[i]
-    );
+  if (!direction) {
+    slideshowIndex = newIndex;
+    renderSlideshowFrame();
+    return;
   }
 
-  recorder.stop();
+  const outClass = direction === "next" ? "ss-out-next" : "ss-out-prev";
+  inner.classList.add(outClass);
+
+  setTimeout(() => {
+    slideshowIndex = newIndex;
+    renderSlideshowFrame();
+
+    // swap to the opposite offset (so it enters from the correct side), then animate to center
+    inner.classList.remove(outClass);
+    const inClass = direction === "next" ? "ss-out-prev" : "ss-out-next";
+    inner.classList.add(inClass);
+
+    // force reflow so the browser registers the starting position before transitioning
+    void inner.offsetWidth;
+
+    inner.classList.remove(inClass);
+  }, SLIDESHOW_TRANSITION);
 }
 
-// ==========================
-// RENDER FRAME
-// ==========================
+function startSlideshowTimer() {
+  clearInterval(slideshowTimer);
+  if (!slideshowPlaying) return;
 
-function renderFrame(ctx, canvas, imgObj) {
-
-  return new Promise(resolve => {
-
-    const img = new Image();
-
-    img.crossOrigin = "anonymous";
-
-    img.src = imgObj.src;
-
-    img.onload = () => {
-
-      let start = null;
-
-      const duration = 2000;
-
-      function animate(timestamp) {
-
-        if (!start) start = timestamp;
-
-        const progress = timestamp - start;
-
-        // background
-        ctx.fillStyle = "#1a0f1f";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // contain full image
-        const scale = Math.min(
-          canvas.width / img.width,
-          canvas.height / img.height
-        );
-
-        const w = img.width * scale;
-        const h = img.height * scale;
-
-        const x = (canvas.width - w) / 2;
-        const y = (canvas.height - h) / 2;
-
-        ctx.drawImage(img, x, y, w, h);
-
-        // overlay
-        const gradient = ctx.createLinearGradient(
-          0, 0, 0, canvas.height
-        );
-
-        gradient.addColorStop(0, "rgba(0,0,0,0.2)");
-        gradient.addColorStop(1, "rgba(0,0,0,0.6)");
-
-        ctx.fillStyle = gradient;
-
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // caption
-        ctx.fillStyle = "#fff";
-
-        ctx.textAlign = "center";
-
-        ctx.font = "bold 50px serif";
-
-        ctx.fillText(
-          imgObj.caption || "",
-          canvas.width / 2,
-          canvas.height - 120
-        );
-
-        ctx.font = "28px sans-serif";
-
-        ctx.fillText(
-          imgObj.desc || "",
-          canvas.width / 2,
-          canvas.height - 70
-        );
-
-        if (progress < duration) {
-          requestAnimationFrame(animate);
-        } else {
-          resolve();
-        }
-      }
-
-      requestAnimationFrame(animate);
-    };
-
-    img.onerror = () => resolve(); // don't hang the whole export on one bad image
-  });
+  slideshowTimer = setInterval(() => {
+    slideshowNext();
+  }, SLIDESHOW_INTERVAL);
 }
 
-// ==========================
-// VIDEO PREVIEW
-// ==========================
-
-function showVideoPreview(url) {
-
-  const modal = document.getElementById("videoModal");
-
-  const video = document.getElementById("previewVideo");
-
-  const downloadBtn = document.getElementById("downloadBtn");
-
-  video.src = url;
-
-  downloadBtn.href = url;
-
-  downloadBtn.download = "wedding-slideshow.webm";
-
-  modal.classList.remove("hidden");
-
-  modal.classList.add("flex");
+function slideshowNext() {
+  const newIndex = (slideshowIndex + 1) % adminPhotos.length;
+  goToSlide(newIndex, "next");
 }
 
-function closeVideoPreview() {
+function slideshowPrev() {
+  const newIndex = (slideshowIndex - 1 + adminPhotos.length) % adminPhotos.length;
+  goToSlide(newIndex, "prev");
+}
 
-  document.getElementById("videoModal").classList.add("hidden");
+function toggleSlideshowPlay() {
+  slideshowPlaying = !slideshowPlaying;
+  updatePlayIcon();
+  startSlideshowTimer();
+}
 
-  document.getElementById("videoModal").classList.remove("flex");
+function closeSlideshow() {
+  clearInterval(slideshowTimer);
+  const modal = document.getElementById("slideshowModal");
+  modal.classList.add("hidden");
+  modal.classList.remove("flex");
 }
 
 // ==========================
@@ -644,12 +334,12 @@ function closeVideoPreview() {
 
 window.showPage = showPage;
 window.handleImageClick = handleImageClick;
-window.toggleSelectMode = toggleSelectMode;
-window.handleCollectionButton = handleCollectionButton;
-window.removeCollection = removeCollection;
 window.deletePhoto = deletePhoto;
-window.generateSlideshow = generateSlideshow;
-window.closeVideoPreview = closeVideoPreview;
+window.openSlideshow = openSlideshow;
+window.slideshowNext = slideshowNext;
+window.slideshowPrev = slideshowPrev;
+window.toggleSlideshowPlay = toggleSlideshowPlay;
+window.closeSlideshow = closeSlideshow;
 
 // ==========================
 // INIT
@@ -657,7 +347,6 @@ window.closeVideoPreview = closeVideoPreview;
 
 showPage("album");
 
-updateCollectionButton();
 window.signOut = function() {
   clearSession();
   window.location.href = "login.html";
