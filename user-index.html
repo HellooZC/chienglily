@@ -147,7 +147,7 @@ body {
         Cancel
       </button>
 
-      <button onclick="savePhoto()"
+      <button id="saveBtn" onclick="savePhoto()"
         class="flex-1 py-2 rounded-xl bg-[var(--color-primary)] text-white text-sm">
         Save
       </button>
@@ -156,7 +156,59 @@ body {
   </div>
 </div>
 
-<script>
+<script type="module">
+import {
+  db, ensureSignedIn,
+  collection, onSnapshot, query, where, orderBy, addDoc, serverTimestamp,
+  storage, ref, uploadString, getDownloadURL
+} from "./assets/js/firebase-config.js";
+import { requireSession, clearSession } from "./assets/js/auth.js";
+
+const session = requireSession("guest"); // redirects if not logged in / wrong role
+if (!session) throw new Error("Not authenticated - redirecting to login.");
+
+let currentUser = null;
+ensureSignedIn().then(user => { currentUser = user; });
+
+let myPhotos = [];
+
+const photosQuery = query(
+  collection(db, "photos"),
+  where("uploadedBy", "==", session.id)
+);
+
+onSnapshot(photosQuery, (snapshot) => {
+  myPhotos = snapshot.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => {
+      const ta = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+      const tb = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+      return tb - ta; // newest first
+    });
+  if (currentPage === "album") renderAlbum();
+}, (err) => {
+  console.error("Failed to load photos:", err);
+});
+
+function renderAlbum() {
+  const grid = document.getElementById("albumGrid");
+  if (!grid) return;
+
+  if (myPhotos.length === 0) {
+    grid.innerHTML = `<p class="col-span-2 text-center text-xs text-[var(--color-muted)] py-8">No photos yet — capture or upload your first memory!</p>`;
+    return;
+  }
+
+  grid.innerHTML = myPhotos.map(p => `
+    <div class="relative rounded-2xl overflow-hidden aspect-square">
+      <img src="${p.imageUrl}"
+        class="album-img w-full h-full object-cover cursor-pointer"
+        data-caption="${(p.title || '').replace(/"/g, '&quot;')}"
+        data-desc="${(p.caption || '').replace(/"/g, '&quot;')}">
+    </div>
+  `).join("");
+}
+
 // ==========================
 // GALLERY STATE
 // ==========================
@@ -292,38 +344,13 @@ function showPage(page) {
 
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
-          <div class="relative rounded-2xl overflow-hidden">
-            <img src="assets/login-1.jpeg"
-              class="album-img w-full h-52 object-cover cursor-pointer"
-              data-caption="Our First Look"
-              data-desc="The moment we saw each other for the first time ❤️">
-          </div>
-
-          <div class="relative rounded-2xl overflow-hidden">
-            <img src="assets/login-2.jpeg"
-              class="album-img w-full h-52 object-cover cursor-pointer"
-              data-caption="The Ceremony"
-              data-desc="Surrounded by love and family.">
-          </div>
-
-          <div class="relative rounded-2xl overflow-hidden">
-            <img src="assets/login-3.jpeg"
-              class="album-img w-full h-52 object-cover cursor-pointer"
-              data-caption="Happiness"
-              data-desc="Pure joy captured in a single frame.">
-          </div>
-
-          <div class="relative rounded-2xl overflow-hidden">
-            <img src="assets/login-4.jpeg"
-              class="album-img w-full h-52 object-cover cursor-pointer"
-              data-caption="Forever Begins"
-              data-desc="A new chapter starts here.">
-          </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div id="albumGrid" class="grid grid-cols-2 gap-2 col-span-2"></div>
 
         </div>
       </div>
     `;
+    renderAlbum();
   }
 
     if (page === "camera") {
@@ -408,13 +435,13 @@ function showPage(page) {
         <!-- AVATAR -->
         <div class="w-24 h-24 rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center shadow-lg border border-[var(--color-border)]">
             <span class="text-2xl font-script text-[var(--color-text)]">
-            JD
+            ${(session.name || "").split(" ").map(w => w[0]).join("").toUpperCase()}
             </span>
         </div>
 
         <!-- NAME -->
         <h2 class="mt-4 text-2xl font-script text-[var(--color-text)]">
-            John Doe
+            ${session.name}
         </h2>
 
         <!-- TAG -->
@@ -438,7 +465,7 @@ function showPage(page) {
         <div class="flex-1"></div>
 
         <!-- SIGN OUT BUTTON -->
-        <a href="https://helloozc.github.io/chienglily/login.html"
+        <a href="#" onclick="signOut(); return false;"
             class="mt-8 w-full max-w-sm py-3 rounded-2xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium shadow-lg active:scale-95 transition block text-center">
             Sign Out
         </a>
@@ -553,37 +580,68 @@ function closePreview() {
   modal.classList.remove("flex");
 }
 
-function savePhoto() {
-  const caption = document.getElementById("captionInput").value;
-  const desc = document.getElementById("descInput").value;
+// ==========================
+// SAVE PHOTO -> FIREBASE STORAGE + FIRESTORE
+// ==========================
+async function savePhoto() {
+  const caption = document.getElementById("captionInput").value.trim();
+  const desc = document.getElementById("descInput").value.trim();
 
-  addToAlbum(tempImageData, caption, desc);
+  if (!tempImageData) return;
 
-  closePreview();
+  const saveBtn = document.getElementById("saveBtn");
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.innerText = "Uploading...";
+  }
+
+  try {
+    const filename = `uploads/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
+    const storageRef = ref(storage, filename);
+
+    // tempImageData is a base64 data URL from canvas or file reader
+    await uploadString(storageRef, tempImageData, "data_url");
+
+    const downloadURL = await getDownloadURL(storageRef);
+
+    await addDoc(collection(db, "photos"), {
+      uploadedBy: session.id,
+      uploadedByName: session.name,
+      title: caption || "",      // your existing "caption" input becomes the title
+      caption: desc || "",       // your existing "desc" input becomes the caption
+      imageUrl: downloadURL,
+      createdAt: serverTimestamp()
+    });
+
+    // onSnapshot listener above will pick up the new doc automatically
+    // and re-render the album — no manual DOM insertion needed.
+    closePreview();
+
+  } catch (err) {
+    console.error("Upload failed:", err);
+    alert("Upload failed, please try again.");
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerText = "Save";
+    }
+  }
 }
 
-function addToAlbum(src, caption, desc) {
-  const grid = document.querySelector(".grid");
-  if (!grid) return;
-
-  const div = document.createElement("div");
-  div.className = "relative rounded-2xl overflow-hidden";
-
-  div.innerHTML = `
-    <img 
-      src="${src}" 
-      class="album-img w-full h-52 object-cover cursor-pointer"
-      data-caption="${caption || ''}"
-      data-desc="${desc || ''}"
-    >
-
-    <div class="absolute bottom-0 left-0 right-0 bg-black/40 text-white text-xs p-2 opacity-0 hover:opacity-100 transition">
-      ${caption || "New memory"}
-    </div>
-  `;
-
-  grid.prepend(div);
-}
+// ==========================
+// EXPOSE TO INLINE onclick HANDLERS
+// (required because this script is type="module")
+// ==========================
+window.showPage = showPage;
+window.savePhoto = savePhoto;
+window.closePreview = closePreview;
+window.takePhoto = takePhoto;
+window.flipCamera = flipCamera;
+window.uploadImage = uploadImage;
+window.signOut = function() {
+  clearSession();
+  window.location.href = "login.html";
+};
 </script>
 <style>
 .animate-fade {
@@ -597,5 +655,3 @@ function addToAlbum(src, caption, desc) {
 </style>
 </body>
 </html>
-
-
