@@ -127,7 +127,7 @@ body {
 
     <!-- image -->
     <img id="previewImg" class="w-full h-60 object-cover rounded-2xl mb-4"/>
-    
+
     <!-- description -->
     <textarea id="descInput"
       placeholder="Share your message for the couple..."
@@ -157,10 +157,10 @@ import {
   storage, ref, uploadString, getDownloadURL
 } from "./assets/js/firebase-config.js";
 import { requireSession, clearSession } from "./assets/js/auth.js";
-
+import { CCD_PREVIEW_FILTER, applyCcdEffect } from "./assets/js/ccd-filter.js";
 const session = requireSession("guest"); // redirects if not logged in / wrong role
 if (!session) throw new Error("Not authenticated - redirecting to login.");
-
+let useCcdFilter = false;
 let currentUser = null;
 ensureSignedIn().then(user => { currentUser = user; });
 
@@ -367,6 +367,11 @@ function showPage(page) {
 
           <!-- CAMERA FRAME (fills remaining space) -->
           <div class="relative flex-1 min-h-0 rounded-3xl overflow-hidden bg-black shadow-2xl">
+            <!-- CCD TOGGLE -->
+            <button onclick="toggleCcdFilter()" id="ccdToggleBtn"
+              class="absolute top-3 right-3 z-20 px-3 py-1.5 rounded-full text-[10px] tracking-widest uppercase backdrop-blur border border-white/30 text-white bg-black/30 transition">
+              <span id="ccdToggleText">CCD Off</span>
+            </button>
 
             <video id="cameraVideo"
               autoplay
@@ -500,13 +505,29 @@ async function startCamera() {
     });
 
     video.srcObject = stream;
-
-    // Mirror only the front (selfie) camera preview
+    video.style.filter = useCcdFilter ? CCD_PREVIEW_FILTER : "none";
     video.style.transform = useFrontCamera ? "scaleX(-1)" : "scaleX(1)";
 
   } catch (err) {
     console.error("Camera error:", err);
     alert("Camera not supported or permission denied.");
+  }
+}
+
+function toggleCcdFilter() {
+  useCcdFilter = !useCcdFilter;
+
+  const video = document.getElementById("cameraVideo");
+  if (video) {
+    video.style.filter = useCcdFilter ? CCD_PREVIEW_FILTER : "none";
+  }
+
+  const btn = document.getElementById("ccdToggleBtn");
+  const text = document.getElementById("ccdToggleText");
+  if (text) text.innerText = useCcdFilter ? "CCD On" : "CCD Off";
+  if (btn) {
+    btn.classList.toggle("bg-[var(--color-primary)]", useCcdFilter);
+    btn.classList.toggle("bg-black/30", !useCcdFilter);
   }
 }
 
@@ -522,7 +543,24 @@ function uploadImage(event) {
   const reader = new FileReader();
 
   reader.onload = function(e) {
-    openPreview(e.target.result); // SAME FLOW
+    if (!useCcdFilter) {
+      openPreview(e.target.result);
+      return;
+    }
+
+    // Route uploaded image through the canvas so the CCD pass applies
+    // the same way it does to camera captures.
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.getElementById("photoCanvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0);
+      applyCcdEffect(ctx, canvas);
+      openPreview(canvas.toDataURL("image/jpeg"));
+    };
+    img.src = e.target.result;
   };
 
   reader.readAsDataURL(file);
@@ -552,12 +590,19 @@ function takePhoto() {
   const ctx = canvas.getContext("2d");
 
   if (useFrontCamera) {
-    // Flip horizontally so the saved photo isn't mirrored/backwards
     ctx.translate(canvas.width, 0);
     ctx.scale(-1, 1);
   }
 
   ctx.drawImage(video, 0, 0);
+
+  if (useFrontCamera) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // reset before pixel-level pass
+  }
+
+  if (useCcdFilter) {
+    applyCcdEffect(ctx, canvas);
+  }
 
   const dataURL = canvas.toDataURL("image/jpeg");
 
@@ -639,6 +684,7 @@ window.closePreview = closePreview;
 window.takePhoto = takePhoto;
 window.flipCamera = flipCamera;
 window.uploadImage = uploadImage;
+window.toggleCcdFilter = toggleCcdFilter;
 window.signOut = function() {
   clearSession();
   window.location.href = "login.html";
