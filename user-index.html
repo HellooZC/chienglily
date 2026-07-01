@@ -562,36 +562,6 @@ function flipCamera() {
   startCamera(); // restart with new camera
 }
 
-function uploadImage(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-
-  reader.onload = function(e) {
-    if (!useCcdFilter) {
-      openPreview(e.target.result);
-      return;
-    }
-
-    // Route uploaded image through the canvas so the CCD pass applies
-    // the same way it does to camera captures.
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.getElementById("photoCanvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0);
-      applyCcdEffect(ctx, canvas);
-      openPreview(canvas.toDataURL("image/jpeg"));
-    };
-    img.src = e.target.result;
-  };
-
-  reader.readAsDataURL(file);
-}
-
 // STOP CAMERA
 function stopCamera() {
   if (stream) {
@@ -603,15 +573,26 @@ function stopCamera() {
   if (video) video.srcObject = null;
 }
 
+function setCaptureBusy(isBusy) {
+  const overlay = document.getElementById("captureBusyOverlay");
+  if (!overlay) return;
+  overlay.classList.toggle("hidden", !isBusy);
+  overlay.classList.toggle("flex", isBusy);
+}
+
 // TAKE PHOTO
-function takePhoto() {
+async function takePhoto() {
   const video = document.getElementById("cameraVideo");
   const canvas = document.getElementById("photoCanvas");
 
   if (!video || !stream) return;
 
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
+  const { width, height } = useCcdFilter
+    ? getCcdCanvasSize(video.videoWidth, video.videoHeight)
+    : { width: video.videoWidth, height: video.videoHeight };
+
+  canvas.width = width;
+  canvas.height = height;
 
   const ctx = canvas.getContext("2d");
 
@@ -620,19 +601,57 @@ function takePhoto() {
     ctx.scale(-1, 1);
   }
 
-  ctx.drawImage(video, 0, 0);
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
   if (useFrontCamera) {
-    ctx.setTransform(1, 0, 0, 1, 0, 0); // reset before pixel-level pass
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
   }
 
   if (useCcdFilter) {
-    applyCcdEffect(ctx, canvas);
+    setCaptureBusy(true);
+    await applyCcdEffect(ctx, canvas);
+    setCaptureBusy(false);
   }
 
-  const dataURL = canvas.toDataURL("image/jpeg");
+  const dataURL = canvas.toDataURL("image/jpeg", 0.9);
 
   openPreview(dataURL);
+}
+
+// UPLOAD IMAGE
+async function uploadImage(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    if (!useCcdFilter) {
+      openPreview(e.target.result);
+      return;
+    }
+
+    const img = new Image();
+    img.onload = async () => {
+      const canvas = document.getElementById("photoCanvas");
+      const { width, height } = getCcdCanvasSize(img.width, img.height);
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
+
+      setCaptureBusy(true);
+      await applyCcdEffect(ctx, canvas);
+      setCaptureBusy(false);
+
+      openPreview(canvas.toDataURL("image/jpeg", 0.9));
+    };
+    img.src = e.target.result;
+  };
+
+  reader.readAsDataURL(file);
 }
 
 // OPEN PREVIEW
