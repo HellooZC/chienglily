@@ -33,17 +33,31 @@ export const CONTRAST_DEFAULT = 1.16;
 
 let ccdContrast = CONTRAST_DEFAULT;
 
+// Color mode is the split-tone character of the effect — which parts of
+// the tonal range lean warm vs. cool. Also runtime-adjustable (a toggle
+// button rather than a drag), same reasoning as contrast above.
+export const COLOR_MODE_WARM = "warm";
+export const COLOR_MODE_COOL = "cool";
+export const COLOR_MODE_DEFAULT = COLOR_MODE_WARM;
+
+let ccdColorMode = COLOR_MODE_DEFAULT;
+
 // ---- Live preview (CSS approximation) ----------------------------------
 
 // Cheap CSS filter used ONLY for the live video preview, so framing the
 // shot feels responsive. Not pixel-accurate — the real effect is baked
 // into the photo at capture time via applyCcdEffect(). Contrast tracks the
-// same adjustable value as the real effect, with a small fixed offset —
-// CSS contrast() and the pixel-level tone curve below aren't the same
-// math, and a raw 1:1 mapping looked slightly stronger on screen than what
-// actually lands in the saved photo.
+// same adjustable value as the real effect (small fixed offset, see note
+// in setCcdContrast usage). Color mode swaps which tint/hue-rotate combo
+// is used — CSS can't do true split-toning, so this is just a rough
+// on-screen hint of "warm" vs "cool", not a pixel match.
 export function getCcdPreviewFilter() {
   const previewContrast = Math.max(0.5, ccdContrast - 0.04);
+
+  if (ccdColorMode === COLOR_MODE_COOL) {
+    return `saturate(1.15) contrast(${previewContrast.toFixed(2)}) brightness(1.22) hue-rotate(6deg)`;
+  }
+
   return `saturate(1.3) contrast(${previewContrast.toFixed(2)}) brightness(1.22) sepia(0.05) hue-rotate(-3deg)`;
 }
 
@@ -63,7 +77,19 @@ export function resetCcdContrast() {
   return setCcdContrast(CONTRAST_DEFAULT);
 }
 
-// ---- Tone/color lookup tables (rebuilt whenever contrast changes) ------
+// ---- Color mode getter/setter --------------------------------------------
+
+export function getCcdColorMode() {
+  return ccdColorMode;
+}
+
+export function setCcdColorMode(mode) {
+  ccdColorMode = mode === COLOR_MODE_COOL ? COLOR_MODE_COOL : COLOR_MODE_WARM;
+  rebuildLUTs();
+  return ccdColorMode;
+}
+
+// ---- Tone/color lookup tables (rebuilt whenever contrast/mode changes) -
 
 function applyExposure(v) {
   const linear = Math.pow(v, 2.2);
@@ -87,20 +113,41 @@ function toneCurve(v) {
   return Math.max(0, Math.min(1, out));
 }
 
+// Per-channel split-tone bias.
+// Warm = cool shadows / warm highlights (classic vintage-flash look).
+// Cool = red pulled back and blue pushed up across the whole range,
+// strongest in the highlights, with a touch of cyan in the greens so it
+// reads as cool-blue rather than magenta — the "bad fluorescent white
+// balance" digicam look.
+function colorBias(channel, v) {
+  if (ccdColorMode === COLOR_MODE_COOL) {
+    if (channel === "r") {
+      return v > 0.5 ? -(v - 0.5) * 0.10 : -(0.5 - v) * 0.04;
+    } else if (channel === "g") {
+      return v < 0.5 ? (0.5 - v) * 0.035 : (v - 0.5) * 0.01;
+    } else if (channel === "b") {
+      return v > 0.5 ? (v - 0.5) * 0.12 : (0.5 - v) * 0.06;
+    }
+    return 0;
+  }
+
+  // warm (default)
+  if (channel === "r") {
+    return v > 0.5 ? (v - 0.5) * 0.11 : -(0.5 - v) * 0.015;
+  } else if (channel === "g") {
+    return (v - 0.5) * 0.02;
+  } else if (channel === "b") {
+    return v < 0.5 ? (0.5 - v) * 0.09 : -(v - 0.5) * 0.07;
+  }
+  return 0;
+}
+
 function buildLUT(channel) {
   const lut = new Uint8ClampedArray(256);
   for (let i = 0; i < 256; i++) {
     let v = toneCurve(i / 255);
-
-    if (channel === "r") {
-      v += v > 0.5 ? (v - 0.5) * 0.11 : -(0.5 - v) * 0.015;
-    } else if (channel === "g") {
-      v += (v - 0.5) * 0.02;
-    } else if (channel === "b") {
-      v += v < 0.5 ? (0.5 - v) * 0.09 : -(v - 0.5) * 0.07;
-    }
-
-    lut[i] = Math.round(v * 255);
+    v += colorBias(channel, v);
+    lut[i] = Math.round(Math.max(0, Math.min(1, v)) * 255);
   }
   return lut;
 }
@@ -113,7 +160,7 @@ function rebuildLUTs() {
   LUT_B = buildLUT("b");
 }
 
-rebuildLUTs(); // initial build at module load, using CONTRAST_DEFAULT
+rebuildLUTs(); // initial build at module load, using the defaults above
 
 // ---- Helpers ------------------------------------------------------------
 

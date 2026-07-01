@@ -157,9 +157,11 @@ import {
   storage, ref, uploadString, getDownloadURL
 } from "./assets/js/firebase-config.js";
 import { requireSession, clearSession } from "./assets/js/auth.js";
-import { applyCcdEffect, getCcdCanvasSize, getCcdPreviewFilter, getCcdContrast, setCcdContrast, resetCcdContrast, CONTRAST_DEFAULT } from "./assets/js/ccd-filter.js";
+import { applyCcdEffect, getCcdCanvasSize, getCcdPreviewFilter, getCcdContrast, setCcdContrast, resetCcdContrast, CONTRAST_DEFAULT, getCcdColorMode, setCcdColorMode, COLOR_MODE_WARM, COLOR_MODE_COOL } from "./assets/js/ccd-filter.js";
+
 const session = requireSession("guest"); // redirects if not logged in / wrong role
 if (!session) throw new Error("Not authenticated - redirecting to login.");
+
 let useCcdFilter = false;
 let currentUser = null;
 const CONTRAST_DRAG_SENSITIVITY = 0.004; // contrast units per pixel dragged
@@ -390,6 +392,12 @@ function showPage(page) {
               <span id="ccdToggleText">CCD Off</span>
             </button>
 
+            <!-- COLOR MODE TOGGLE (only relevant once CCD is on) -->
+            <button onclick="event.stopPropagation(); toggleCcdColorMode()" id="ccdColorModeBtn"
+              class="hidden absolute top-12 right-3 z-20 px-3 py-1.5 rounded-full text-[10px] tracking-widest uppercase backdrop-blur border border-white/30 text-white bg-black/30 transition">
+              <span id="ccdColorModeText">Warm</span>
+            </button>
+
             <!-- CONTRAST READOUT (shows during drag) -->
             <div id="contrastIndicator"
               class="absolute top-3 left-3 z-20 px-3 py-1.5 rounded-full text-[10px] tracking-widest uppercase backdrop-blur border border-white/30 text-white bg-black/30 opacity-0 transition-opacity duration-300 pointer-events-none">
@@ -555,6 +563,28 @@ function toggleCcdFilter() {
 
   const hint = document.getElementById("contrastHint");
   if (hint) hint.classList.toggle("hidden", !useCcdFilter);
+
+  const colorModeBtn = document.getElementById("ccdColorModeBtn");
+  if (colorModeBtn) colorModeBtn.classList.toggle("hidden", !useCcdFilter);
+}
+
+function toggleCcdColorMode() {
+  const next = getCcdColorMode() === COLOR_MODE_WARM ? COLOR_MODE_COOL : COLOR_MODE_WARM;
+  setCcdColorMode(next);
+
+  const video = document.getElementById("cameraVideo");
+  if (video && useCcdFilter) {
+    video.style.filter = getCcdPreviewFilter();
+  }
+
+  const text = document.getElementById("ccdColorModeText");
+  if (text) text.innerText = next === COLOR_MODE_WARM ? "Warm" : "Cool";
+
+  const btn = document.getElementById("ccdColorModeBtn");
+  if (btn) {
+    btn.classList.toggle("bg-[var(--color-primary)]", next === COLOR_MODE_COOL);
+    btn.classList.toggle("bg-black/30", next === COLOR_MODE_WARM);
+  }
 }
 
 function flipCamera() {
@@ -739,6 +769,7 @@ function setupContrastDrag() {
 
 function onContrastDragStart(e) {
   if (!useCcdFilter) return; // gesture only means something once CCD is on
+  if (e.target.closest("button")) return; // let button taps through untouched
 
   contrastDragActive = true;
   contrastDragStartY = e.clientY;
@@ -778,8 +809,9 @@ function onContrastDragEnd() {
   hideContrastIndicatorSoon();
 }
 
-function onContrastDragReset() {
+function onContrastDragReset(e) {
   if (!useCcdFilter) return;
+  if (e.target.closest("button")) return; // don't reset contrast on a button double-tap
 
   resetCcdContrast();
 
@@ -821,6 +853,7 @@ window.takePhoto = takePhoto;
 window.flipCamera = flipCamera;
 window.uploadImage = uploadImage;
 window.toggleCcdFilter = toggleCcdFilter;
+window.toggleCcdColorMode = toggleCcdColorMode;
 window.signOut = function() {
   clearSession();
   window.location.href = "login.html";
