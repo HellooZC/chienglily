@@ -22,7 +22,16 @@ const VIGNETTE_STRENGTH = 0.25;      // corner darkening from a cheap lens
 const CHROMATIC_ABERRATION_PX = 2.2; // max R/B channel offset at the extreme corners
 const JPEG_REENCODE_QUALITY = 0.55;  // low-quality JPEG pass = authentic period compression artifacts
 const MAX_PROCESSING_DIMENSION = 1600; // cap long edge for perf; plenty for this app's card-sized display
-
+const EXPOSURE_STOPS = 0.6;          // +EV brighten before the tone curve — real digicams at base ISO often read a touch hot/flash-y
+const EXPOSURE_FACTOR = Math.pow(2, EXPOSURE_STOPS);
+const SATURATION_BOOST = 1.28;       // >1 = punchier color (real CCD JPEGs are oversaturated, not muted)
+const CONTRAST_AMOUNT = 1.16;        // midtone contrast boost
+const SHARPEN_AMOUNT = 0.65;         // unsharp-mask strength -> the "crunchy" in-camera sharpening halo look
+const GRAIN_AMOUNT = 7;              // fine grain, kept restrained since this is a LOW-ISO look
+const VIGNETTE_STRENGTH = 0.25;      // corner darkening from a cheap lens
+const CHROMATIC_ABERRATION_PX = 2.2; // max R/B channel offset at the extreme corners
+const JPEG_REENCODE_QUALITY = 0.55;  // low-quality JPEG pass = authentic period compression artifacts
+const MAX_PROCESSING_DIMENSION = 1600; // cap long edge for perf; plenty for this app's card-sized display
 // CSS approximation for the LIVE viewfinder only (cheap, responsive).
 // The real look is baked in for real at capture time via applyCcdEffect().
 export const CCD_PREVIEW_FILTER =
@@ -30,10 +39,20 @@ export const CCD_PREVIEW_FILTER =
 
 // ---- Precomputed tone/color lookup tables (built once at module load) --
 
+function applyExposure(v) {
+  // Approximate photographic exposure by linearizing (undo gamma), scaling
+  // by the exposure factor, then re-encoding back to gamma space. This
+  // feeds the brightened value into the highlight rolloff below instead of
+  // just flatly raising brightness — so it reads as "more exposed" (glowy,
+  // soft-clipped highlights) rather than "washed out."
+  const linear = Math.pow(v, 2.2);
+  const exposed = Math.min(linear * EXPOSURE_FACTOR, 4); // headroom cap; rolloff below handles the rest
+  return Math.pow(exposed, 1 / 2.2);
+}
+
 function toneCurve(v) {
-  // v in 0..1. Midtone contrast boost + soft highlight rolloff + slight
-  // shadow crush — mimics a small CCD's limited dynamic range plus the
-  // in-camera JPEG engine's contrast punch.
+  v = applyExposure(v);
+
   const mid = 0.45;
   let out = (v - mid) * CONTRAST_AMOUNT + mid;
 
