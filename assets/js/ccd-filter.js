@@ -27,7 +27,7 @@ const MAX_PROCESSING_DIMENSION = 1600; // cap long edge for perf; plenty for thi
 // CSS approximation for the LIVE viewfinder only (cheap, responsive).
 // The real look is baked in for real at capture time via applyCcdEffect().
 export const CCD_PREVIEW_FILTER =
-  "saturate(1.3) contrast(1.12) brightness(1.03) sepia(0.05) hue-rotate(-3deg)";
+  "saturate(1.3) contrast(1.32) brightness(1.33) sepia(0.05) hue-rotate(-3deg)";
 
 // ---- Precomputed tone/color lookup tables (built once at module load) --
 
