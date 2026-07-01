@@ -157,11 +157,18 @@ import {
   storage, ref, uploadString, getDownloadURL
 } from "./assets/js/firebase-config.js";
 import { requireSession, clearSession } from "./assets/js/auth.js";
-import { CCD_PREVIEW_FILTER, applyCcdEffect } from "./assets/js/ccd-filter.js";
+import { applyCcdEffect, getCcdCanvasSize, getCcdPreviewFilter, getCcdContrast, setCcdContrast, resetCcdContrast, CONTRAST_DEFAULT } from "./assets/js/ccd-filter.js";
 const session = requireSession("guest"); // redirects if not logged in / wrong role
 if (!session) throw new Error("Not authenticated - redirecting to login.");
 let useCcdFilter = false;
 let currentUser = null;
+const CONTRAST_DRAG_SENSITIVITY = 0.004; // contrast units per pixel dragged
+
+let contrastDragActive = false;
+let contrastDragStartY = 0;
+let contrastDragStartValue = CONTRAST_DEFAULT;
+let contrastRafPending = false;
+let contrastFadeTimer = null;
 ensureSignedIn().then(user => { currentUser = user; });
 
 let myPhotos = [];
@@ -350,6 +357,7 @@ function showPage(page) {
     if (page === "camera") {
     setTimeout(() => {
       startCamera();
+      setupContrastDrag();
     }, 300);
     content.innerHTML = `
       <div class="fixed top-0 left-0 right-0 bottom-[76px] flex justify-center z-10">
@@ -366,12 +374,7 @@ function showPage(page) {
           </div>
 
           <!-- CAMERA FRAME (fills remaining space) -->
-          <div class="relative flex-1 min-h-0 rounded-3xl overflow-hidden bg-black shadow-2xl">
-            <!-- CCD TOGGLE -->
-            <button onclick="toggleCcdFilter()" id="ccdToggleBtn"
-              class="absolute top-3 right-3 z-20 px-3 py-1.5 rounded-full text-[10px] tracking-widest uppercase backdrop-blur border border-white/30 text-white bg-black/30 transition">
-              <span id="ccdToggleText">CCD Off</span>
-            </button>
+          <div id="cameraFrame" style="touch-action: none;" class="relative flex-1 min-h-0 rounded-3xl overflow-hidden bg-black shadow-2xl">
 
             <video id="cameraVideo"
               autoplay
@@ -379,8 +382,29 @@ function showPage(page) {
               class="w-full h-full object-cover transition-transform duration-200"></video>
 
             <div class="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/10 pointer-events-none"></div>
-
             <div class="absolute inset-0 border border-white/10 rounded-3xl pointer-events-none"></div>
+
+            <!-- CCD TOGGLE -->
+            <button onclick="toggleCcdFilter()" id="ccdToggleBtn"
+              class="absolute top-3 right-3 z-20 px-3 py-1.5 rounded-full text-[10px] tracking-widest uppercase backdrop-blur border border-white/30 text-white bg-black/30 transition">
+              <span id="ccdToggleText">CCD Off</span>
+            </button>
+
+            <!-- CONTRAST READOUT (shows during drag) -->
+            <div id="contrastIndicator"
+              class="absolute top-3 left-3 z-20 px-3 py-1.5 rounded-full text-[10px] tracking-widest uppercase backdrop-blur border border-white/30 text-white bg-black/30 opacity-0 transition-opacity duration-300 pointer-events-none">
+              Contrast ${getCcdContrast().toFixed(2)}
+            </div>
+
+            <!-- HINT (only shown once CCD is on) -->
+            <div id="contrastHint"
+              class="hidden absolute bottom-3 left-1/2 -translate-x-1/2 z-20 text-[10px] tracking-widest uppercase text-white/50 pointer-events-none">
+              Drag to adjust · double-tap to reset
+            </div>
+
+            <div id="captureBusyOverlay" class="hidden absolute inset-0 z-30 bg-black/50 items-center justify-center">
+              <p class="text-white text-sm tracking-[0.2em] uppercase font-serif">Developing…</p>
+            </div>
 
           </div>
 
@@ -498,14 +522,12 @@ async function startCamera() {
     }
 
     stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: useFrontCamera ? "user" : "environment"
-      },
+      video: { facingMode: useFrontCamera ? "user" : "environment" },
       audio: false
     });
 
     video.srcObject = stream;
-    video.style.filter = useCcdFilter ? CCD_PREVIEW_FILTER : "none";
+    video.style.filter = useCcdFilter ? getCcdPreviewFilter() : "none";
     video.style.transform = useFrontCamera ? "scaleX(-1)" : "scaleX(1)";
 
   } catch (err) {
@@ -519,16 +541,20 @@ function toggleCcdFilter() {
 
   const video = document.getElementById("cameraVideo");
   if (video) {
-    video.style.filter = useCcdFilter ? CCD_PREVIEW_FILTER : "none";
+    video.style.filter = useCcdFilter ? getCcdPreviewFilter() : "none";
   }
 
-  const btn = document.getElementById("ccdToggleBtn");
   const text = document.getElementById("ccdToggleText");
   if (text) text.innerText = useCcdFilter ? "CCD On" : "CCD Off";
+
+  const btn = document.getElementById("ccdToggleBtn");
   if (btn) {
     btn.classList.toggle("bg-[var(--color-primary)]", useCcdFilter);
     btn.classList.toggle("bg-black/30", !useCcdFilter);
   }
+
+  const hint = document.getElementById("contrastHint");
+  if (hint) hint.classList.toggle("hidden", !useCcdFilter);
 }
 
 function flipCamera() {
@@ -674,6 +700,97 @@ async function savePhoto() {
   }
 }
 
+// ==========================
+// CCD CONTRAST DRAG GESTURE
+// Drag up on the camera preview = more contrast, drag down = less.
+// Same interaction as the exposure-drag slider in most phone camera apps.
+// Only active once the CCD filter is switched on.
+// ==========================
+
+function setupContrastDrag() {
+  const frame = document.getElementById("cameraFrame");
+  if (!frame) return;
+
+  frame.addEventListener("pointerdown", onContrastDragStart);
+  frame.addEventListener("pointermove", onContrastDragMove);
+  frame.addEventListener("pointerup", onContrastDragEnd);
+  frame.addEventListener("pointercancel", onContrastDragEnd);
+  frame.addEventListener("dblclick", onContrastDragReset);
+}
+
+function onContrastDragStart(e) {
+  if (!useCcdFilter) return; // gesture only means something once CCD is on
+
+  contrastDragActive = true;
+  contrastDragStartY = e.clientY;
+  contrastDragStartValue = getCcdContrast();
+
+  if (e.currentTarget.setPointerCapture) {
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+
+  showContrastIndicator();
+}
+
+function onContrastDragMove(e) {
+  if (!contrastDragActive) return;
+  e.preventDefault();
+
+  const deltaY = e.clientY - contrastDragStartY;
+
+  if (contrastRafPending) return;
+  contrastRafPending = true;
+
+  requestAnimationFrame(() => {
+    contrastRafPending = false;
+
+    setCcdContrast(contrastDragStartValue - deltaY * CONTRAST_DRAG_SENSITIVITY);
+
+    const video = document.getElementById("cameraVideo");
+    if (video) video.style.filter = getCcdPreviewFilter();
+
+    updateContrastIndicator();
+  });
+}
+
+function onContrastDragEnd() {
+  if (!contrastDragActive) return;
+  contrastDragActive = false;
+  hideContrastIndicatorSoon();
+}
+
+function onContrastDragReset() {
+  if (!useCcdFilter) return;
+
+  resetCcdContrast();
+
+  const video = document.getElementById("cameraVideo");
+  if (video) video.style.filter = getCcdPreviewFilter();
+
+  showContrastIndicator();
+  hideContrastIndicatorSoon();
+}
+
+function showContrastIndicator() {
+  clearTimeout(contrastFadeTimer);
+  const el = document.getElementById("contrastIndicator");
+  if (!el) return;
+  el.classList.remove("opacity-0");
+  updateContrastIndicator();
+}
+
+function updateContrastIndicator() {
+  const el = document.getElementById("contrastIndicator");
+  if (el) el.textContent = `Contrast ${getCcdContrast().toFixed(2)}`;
+}
+
+function hideContrastIndicatorSoon() {
+  clearTimeout(contrastFadeTimer);
+  contrastFadeTimer = setTimeout(() => {
+    const el = document.getElementById("contrastIndicator");
+    if (el) el.classList.add("opacity-0");
+  }, 700);
+}
 // ==========================
 // EXPOSE TO INLINE onclick HANDLERS
 // (required because this script is type="module")

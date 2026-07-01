@@ -14,31 +14,60 @@
 
 // ---- Tunable knobs ----------------------------------------------------
 
-const EXPOSURE_STOPS = 0.6;          // +EV brighten before the tone curve — real digicams at base ISO often read a touch hot/flash-y
+const EXPOSURE_STOPS = 0.6;          // +EV brighten before the tone curve
 const EXPOSURE_FACTOR = Math.pow(2, EXPOSURE_STOPS);
-const SATURATION_BOOST = 1.28;       // >1 = punchier color (real CCD JPEGs are oversaturated, not muted)
-const CONTRAST_AMOUNT = 1.16;        // midtone contrast boost
-const SHARPEN_AMOUNT = 0.65;         // unsharp-mask strength -> the "crunchy" in-camera sharpening halo look
-const GRAIN_AMOUNT = 7;              // fine grain, kept restrained since this is a LOW-ISO look
-const VIGNETTE_STRENGTH = 0.25;      // corner darkening from a cheap lens
-const CHROMATIC_ABERRATION_PX = 2.2; // max R/B channel offset at the extreme corners
-const JPEG_REENCODE_QUALITY = 0.55;  // low-quality JPEG pass = authentic period compression artifacts
-const MAX_PROCESSING_DIMENSION = 1600; // cap long edge for perf; plenty for this app's card-sized display
-// CSS approximation for the LIVE viewfinder only (cheap, responsive).
-// The real look is baked in for real at capture time via applyCcdEffect().
-export const CCD_PREVIEW_FILTER =
-  "saturate(1.3) contrast(1.32) brightness(1.33) sepia(0.05) hue-rotate(-3deg)";
+const SATURATION_BOOST = 1.28;       // >1 = punchier color
+const SHARPEN_AMOUNT = 0.65;         // unsharp-mask strength
+const GRAIN_AMOUNT = 7;              // fine grain
+const VIGNETTE_STRENGTH = 0.25;      // corner darkening
+const CHROMATIC_ABERRATION_PX = 2.2; // max R/B channel offset at corners
+const JPEG_REENCODE_QUALITY = 0.55;  // low-quality JPEG pass
+const MAX_PROCESSING_DIMENSION = 1600;
 
-// ---- Precomputed tone/color lookup tables (built once at module load) --
+// Contrast is adjustable at runtime (drag gesture on the camera preview),
+// so it lives as mutable state instead of a fixed const like the knobs
+// above. Everything else stays fixed.
+export const CONTRAST_MIN = 0.85;
+export const CONTRAST_MAX = 1.6;
+export const CONTRAST_DEFAULT = 1.16;
+
+let ccdContrast = CONTRAST_DEFAULT;
+
+// ---- Live preview (CSS approximation) ----------------------------------
+
+// Cheap CSS filter used ONLY for the live video preview, so framing the
+// shot feels responsive. Not pixel-accurate — the real effect is baked
+// into the photo at capture time via applyCcdEffect(). Contrast tracks the
+// same adjustable value as the real effect, with a small fixed offset —
+// CSS contrast() and the pixel-level tone curve below aren't the same
+// math, and a raw 1:1 mapping looked slightly stronger on screen than what
+// actually lands in the saved photo.
+export function getCcdPreviewFilter() {
+  const previewContrast = Math.max(0.5, ccdContrast - 0.04);
+  return `saturate(1.3) contrast(${previewContrast.toFixed(2)}) brightness(1.22) sepia(0.05) hue-rotate(-3deg)`;
+}
+
+// ---- Contrast getters/setters -------------------------------------------
+
+export function getCcdContrast() {
+  return ccdContrast;
+}
+
+export function setCcdContrast(value) {
+  ccdContrast = Math.max(CONTRAST_MIN, Math.min(CONTRAST_MAX, value));
+  rebuildLUTs();
+  return ccdContrast;
+}
+
+export function resetCcdContrast() {
+  return setCcdContrast(CONTRAST_DEFAULT);
+}
+
+// ---- Tone/color lookup tables (rebuilt whenever contrast changes) ------
 
 function applyExposure(v) {
-  // Approximate photographic exposure by linearizing (undo gamma), scaling
-  // by the exposure factor, then re-encoding back to gamma space. This
-  // feeds the brightened value into the highlight rolloff below instead of
-  // just flatly raising brightness — so it reads as "more exposed" (glowy,
-  // soft-clipped highlights) rather than "washed out."
   const linear = Math.pow(v, 2.2);
-  const exposed = Math.min(linear * EXPOSURE_FACTOR, 4); // headroom cap; rolloff below handles the rest
+  const exposed = Math.min(linear * EXPOSURE_FACTOR, 4);
   return Math.pow(exposed, 1 / 2.2);
 }
 
@@ -46,14 +75,14 @@ function toneCurve(v) {
   v = applyExposure(v);
 
   const mid = 0.45;
-  let out = (v - mid) * CONTRAST_AMOUNT + mid;
+  let out = (v - mid) * ccdContrast + mid;
 
   if (out > 0.68) {
     const t = Math.min((out - 0.68) / 0.32, 1);
-    out = 0.68 + 0.32 * (1 - Math.pow(1 - t, 1.8)); // soft rolloff, not a hard clip
+    out = 0.68 + 0.32 * (1 - Math.pow(1 - t, 1.8));
   }
   if (out < 0.1) {
-    out *= 0.82; // crushed blacks
+    out *= 0.82;
   }
   return Math.max(0, Math.min(1, out));
 }
@@ -63,12 +92,10 @@ function buildLUT(channel) {
   for (let i = 0; i < 256; i++) {
     let v = toneCurve(i / 255);
 
-    // Split-tone color bias — the classic "cheap CCD white balance"
-    // fingerprint: slightly cool/cyan shadows, slightly warm/golden highlights.
     if (channel === "r") {
       v += v > 0.5 ? (v - 0.5) * 0.11 : -(0.5 - v) * 0.015;
     } else if (channel === "g") {
-      v += (v - 0.5) * 0.02; // faint punch, keeps foliage/greens lively
+      v += (v - 0.5) * 0.02;
     } else if (channel === "b") {
       v += v < 0.5 ? (0.5 - v) * 0.09 : -(v - 0.5) * 0.07;
     }
@@ -78,9 +105,15 @@ function buildLUT(channel) {
   return lut;
 }
 
-const LUT_R = buildLUT("r");
-const LUT_G = buildLUT("g");
-const LUT_B = buildLUT("b");
+let LUT_R, LUT_G, LUT_B;
+
+function rebuildLUTs() {
+  LUT_R = buildLUT("r");
+  LUT_G = buildLUT("g");
+  LUT_B = buildLUT("b");
+}
+
+rebuildLUTs(); // initial build at module load, using CONTRAST_DEFAULT
 
 // ---- Helpers ------------------------------------------------------------
 
@@ -92,8 +125,6 @@ function clampInt(v, min, max) {
   return v < min ? min : v > max ? max : v;
 }
 
-// Figures out a working size that's fast to process but still plenty sharp
-// for how photos are actually displayed in this app (small mobile cards).
 export function getCcdCanvasSize(sourceWidth, sourceHeight) {
   const longEdge = Math.max(sourceWidth, sourceHeight);
   if (longEdge <= MAX_PROCESSING_DIMENSION) {
@@ -108,11 +139,6 @@ export function getCcdCanvasSize(sourceWidth, sourceHeight) {
 
 // ---- Effect passes --------------------------------------------------------
 
-// Cheap blur via downscale + upscale — used as the "blurred" reference for
-// unsharp masking. Not a true gaussian blur, which is actually helpful
-// here: the slightly blocky resampling produces the kind of ringing/halo a
-// real digicam's aggressive in-camera sharpening left behind, rather than
-// a clean modern sharpen.
 function getBlurredImageData(canvas, scale = 0.3) {
   const { width, height } = canvas;
 
@@ -148,8 +174,6 @@ function applySharpen(ctx, canvas) {
   ctx.putImageData(original, 0, 0);
 }
 
-// Cheap kit-lens chromatic aberration: red pushed outward, blue pulled
-// inward, strongest toward the corners, negligible dead-center.
 function applyChromaticAberration(ctx, canvas) {
   const { width, height } = canvas;
   const src = ctx.getImageData(0, 0, width, height);
@@ -180,9 +204,9 @@ function applyChromaticAberration(ctx, canvas) {
       const ri = (ry * width + rx) * 4;
       const bi = (by * width + bx) * 4;
 
-      o[i]     = s[ri];       // red sampled from a point shifted outward
-      o[i + 1] = s[i + 1];    // green stays put (reference channel)
-      o[i + 2] = s[bi + 2];   // blue sampled from a point shifted inward
+      o[i]     = s[ri];
+      o[i + 1] = s[i + 1];
+      o[i + 2] = s[bi + 2];
       o[i + 3] = s[i + 3];
     }
   }
@@ -219,7 +243,7 @@ function applyGrainAndVignette(data, width, height) {
     const y = (idx / width) | 0;
 
     const lum = (data[i] + data[i + 1] + data[i + 2]) / 3;
-    const shadowBoost = 1 - (lum / 255) * 0.55; // noise reads stronger in shadows, like a real sensor floor
+    const shadowBoost = 1 - (lum / 255) * 0.55;
     const n = (Math.random() - 0.5) * GRAIN_AMOUNT * shadowBoost;
     const nChroma = (Math.random() - 0.5) * GRAIN_AMOUNT * 0.3 * shadowBoost;
 
@@ -242,13 +266,13 @@ function reencodeAsJPEG(canvas) {
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       resolve();
     };
-    img.onerror = resolve; // don't hang the pipeline on a decode failure
+    img.onerror = resolve;
     img.src = dataUrl;
   });
 }
 
 // ---- Main entry point -----------------------------------------------------
-// NOTE: now async (does a real JPEG re-encode roundtrip) — callers must await it.
+
 export async function applyCcdEffect(ctx, canvas) {
   applyChromaticAberration(ctx, canvas);
 
