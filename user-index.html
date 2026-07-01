@@ -127,13 +127,7 @@ body {
 
     <!-- image -->
     <img id="previewImg" class="w-full h-60 object-cover rounded-2xl mb-4"/>
-
-    <!-- caption -->
-    <input id="captionInput"
-      type="text"
-      placeholder="Write a short caption..."
-      class="w-full mb-3 px-4 py-2 rounded-xl border border-[var(--color-border)] bg-transparent text-sm outline-none">
-
+    
     <!-- description -->
     <textarea id="descInput"
       placeholder="Share your message for the couple..."
@@ -576,7 +570,6 @@ function openPreview(src) {
 
   document.getElementById("previewImg").src = src;
 
-  document.getElementById("captionInput").value = "";
   document.getElementById("descInput").value = "";
 
   const modal = document.getElementById("previewModal");
@@ -595,7 +588,6 @@ function closePreview() {
 // SAVE PHOTO -> FIREBASE STORAGE + FIRESTORE
 // ==========================
 async function savePhoto() {
-  const caption = document.getElementById("captionInput").value.trim();
   const desc = document.getElementById("descInput").value.trim();
 
   if (!tempImageData) return;
@@ -618,14 +610,12 @@ async function savePhoto() {
     await addDoc(collection(db, "photos"), {
       uploadedBy: session.id,
       uploadedByName: session.name,
-      title: caption || "",      // your existing "caption" input becomes the title
-      caption: desc || "",       // your existing "desc" input becomes the caption
+      title: "Greeting from: " +session.name,       // title is now always the guest's name
+      caption: desc || "",       // your existing "desc" input stays as caption
       imageUrl: downloadURL,
       createdAt: serverTimestamp()
     });
 
-    // onSnapshot listener above will pick up the new doc automatically
-    // and re-render the album — no manual DOM insertion needed.
     closePreview();
 
   } catch (err) {

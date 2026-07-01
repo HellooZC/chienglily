@@ -439,13 +439,13 @@ async function deletePhoto(photoId, storagePath) {
 
 function openImageModal(data) {
 
-  document.getElementById("modalImg").src = data.src;
+  document.getElementById("modalImg").src = data.imageUrl;
 
   document.getElementById("modalCaption").innerText =
-    data.caption || "";
+    data.title || "";
 
   document.getElementById("modalDesc").innerText =
-    data.desc || "";
+    data.caption || "";
 
   document.getElementById("imageModal").classList.remove("hidden");
   document.getElementById("imageModal").classList.add("flex");
