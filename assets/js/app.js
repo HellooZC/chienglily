@@ -8,7 +8,8 @@ import {
   collection, onSnapshot, query, orderBy, deleteDoc, doc,
   storage, ref, deleteObject
 } from "./firebase-config.js";
-
+import { requireSession, clearSession } from "./auth.js";
+const session = requireSession("admin");
 // ==========================
 // STATE
 // ==========================
@@ -118,7 +119,7 @@ function showPage(page) {
             
             <div class="relative">
 
-              <img src="${img.src}"
+              <img src="${img.imageUrl}"
                 class="w-full h-44 object-cover rounded-2xl">
 
               <button
@@ -171,6 +172,17 @@ function showPage(page) {
           Wedding Manager
         </p>
 
+        <div class="flex-1"></div>
+
+        <a href="#" onclick="signOut(); return false;"
+            class="mt-8 w-full max-w-sm py-3 rounded-2xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium shadow-lg active:scale-95 transition block text-center">
+            Sign Out
+        </a>
+
+        <!-- FOOTER -->
+        <p class="mt-4 text-xs text-[var(--color-muted)]">
+            With love & gratitude ❤️
+        </p>
       </div>
     `;
   }
@@ -205,7 +217,7 @@ function renderAdminGallery() {
         return `
           <div class="relative">
 
-            <img src="${img.src}"
+            <img src="${img.imageUrl}"
               class="w-full h-28 object-cover rounded-xl cursor-pointer"
               onclick="handleImageClick(${index}, this)">
 
@@ -646,3 +658,7 @@ window.closeVideoPreview = closeVideoPreview;
 showPage("album");
 
 updateCollectionButton();
+window.signOut = function() {
+  clearSession();
+  window.location.href = "login.html";
+};

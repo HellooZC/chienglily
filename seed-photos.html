@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Seed Photos (run once, then delete this file)</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 480px; margin: 60px auto; padding: 0 20px; }
+  button { padding: 12px 20px; font-size: 14px; cursor: pointer; }
+  pre { background: #f4f4f4; padding: 12px; border-radius: 8px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+
+<h2>Seed Dummy Photos</h2>
+<p>Writes sample docs into the <code>photos</code> collection so you can test the album views. Uses placeholder image URLs (picsum.photos) — swap with real ones if you want. Run once, check Firestore console, then <strong>delete this file</strong>.</p>
+
+<p style="font-size:13px; color:#555;">⚠️ Update the <code>uploadedBy</code> values below to match the actual doc IDs in your <code>users</code> collection (e.g. "john-wong", "mary-lee") before running — open Firestore console to confirm the real IDs.</p>
+
+<button id="seedBtn">Seed dummy photos</button>
+<pre id="log">Ready.</pre>
+
+<script type="module">
+  import {
+    db, ensureSignedIn,
+    collection, addDoc, serverTimestamp
+  } from "./assets/js/firebase-config.js";
+
+  // Edit uploadedBy/uploadedByName to match real seeded users.
+  const dummyPhotos = [
+    {
+      uploadedBy: "john-wong",
+      uploadedByName: "John Wong",
+      title: "Our First Look",
+      caption: "The moment we saw each other for the first time ❤️",
+      imageUrl: "https://picsum.photos/seed/wedding1/600/600"
+    },
+    {
+      uploadedBy: "john-wong",
+      uploadedByName: "John Wong",
+      title: "The Ceremony",
+      caption: "Surrounded by love and family.",
+      imageUrl: "https://picsum.photos/seed/wedding2/600/600"
+    },
+    {
+      uploadedBy: "mary-lee",
+      uploadedByName: "Mary Lee",
+      title: "Happiness",
+      caption: "Pure joy captured in a single frame.",
+      imageUrl: "https://picsum.photos/seed/wedding3/600/600"
+    },
+    {
+      uploadedBy: "test-guest",
+      uploadedByName: "Test Guest",
+      title: "Forever Begins",
+      caption: "A new chapter starts here.",
+      imageUrl: "https://picsum.photos/seed/wedding4/600/600"
+    }
+  ];
+
+  const log = document.getElementById("log");
+  const btn = document.getElementById("seedBtn");
+
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    log.textContent = "Signing in...\n";
+
+    await ensureSignedIn();
+
+    for (const p of dummyPhotos) {
+      try {
+        await addDoc(collection(db, "photos"), {
+          uploadedBy: p.uploadedBy,
+          uploadedByName: p.uploadedByName,
+          title: p.title,
+          caption: p.caption,
+          imageUrl: p.imageUrl,
+          createdAt: serverTimestamp()
+        });
+        log.textContent += `✔ Added "${p.title}" (by ${p.uploadedByName})\n`;
+      } catch (err) {
+        log.textContent += `✘ Failed "${p.title}": ${err.message}\n`;
+      }
+    }
+
+    log.textContent += "\nDone. Log in as one of those users to see their photos in the album.";
+    btn.disabled = false;
+  });
+</script>
+
+</body>
+</html>
