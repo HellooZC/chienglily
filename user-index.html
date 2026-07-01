@@ -358,70 +358,72 @@ function showPage(page) {
       startCamera();
     }, 300);
     content.innerHTML = `
-      <div class="flex flex-col items-center justify-center p-4">
+      <div class="fixed top-0 left-0 right-0 bottom-[76px] flex justify-center z-10">
+        <div class="w-full max-w-[430px] h-full flex flex-col px-4 pt-4">
 
-        <!-- TITLE -->
-        <div class="text-center mb-4">
-          <h2 class="text-2xl font-script text-[var(--color-text)]">
-            Capture Moment
-          </h2>
-          <p class="text-xs tracking-[0.25em] uppercase text-[var(--color-muted)] mt-1">
-            Wedding Photo Booth
-          </p>
-        </div>
+          <!-- TITLE -->
+          <div class="text-center mb-3 shrink-0">
+            <h2 class="text-2xl font-script text-black drop-shadow">
+              Capture Moment
+            </h2>
+            <p class="text-xs tracking-[0.25em] uppercase text-black/70 mt-1">
+              Wedding Photo Booth
+            </p>
+          </div>
 
-        <!-- CAMERA FRAME -->
-        <div class="relative w-full max-w-sm rounded-3xl overflow-hidden bg-black shadow-2xl">
+          <!-- CAMERA FRAME (fills remaining space) -->
+          <div class="relative flex-1 min-h-0 rounded-3xl overflow-hidden bg-black shadow-2xl">
 
-          <video id="cameraVideo"
-            autoplay
-            playsinline
-            class="w-full h-[500px] object-cover"></video>
+            <video id="cameraVideo"
+              autoplay
+              playsinline
+              class="w-full h-full object-cover transition-transform duration-200"></video>
 
-          <div class="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/10 pointer-events-none"></div>
+            <div class="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/10 pointer-events-none"></div>
 
-          <div class="absolute inset-0 border border-white/10 rounded-3xl pointer-events-none"></div>
+            <div class="absolute inset-0 border border-white/10 rounded-3xl pointer-events-none"></div>
 
-        </div>
+          </div>
 
-        <!-- CONTROLS ROW -->
-        <div class="flex items-center justify-between w-full max-w-sm mt-4 px-4">
-            <label
-              class="w-12 h-12 rounded-full bg-white/20 backdrop-blur flex items-center justify-center border border-[var(--color-primary)]/30 text-[var(--color-primary)] cursor-pointer">
+          <!-- CONTROLS ROW -->
+          <div class="flex items-center justify-between w-full mt-4 mb-2 shrink-0 px-4">
+              <label
+                class="w-12 h-12 rounded-full bg-white/20 backdrop-blur flex items-center justify-center border border-[var(--color-primary)]/30 text-[var(--color-primary)] cursor-pointer">
 
-              <!-- upload icon -->
+                <!-- upload icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                    d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 12V3m0 0l-3 3m3-3l3 3" />
+                </svg>
+
+                <!-- hidden file input -->
+                <input type="file" accept="image/*" class="hidden" onchange="uploadImage(event)">
+              </label>
+
+
+            <!-- CENTER: CAPTURE -->
+            <button onclick="takePhoto()"
+              class="w-16 h-16 rounded-full bg-[var(--color-primary)] shadow-xl flex items-center justify-center border-4 border-white">
+
+              <div class="w-6 h-6 rounded-full border-2 border-white"></div>
+
+            </button>
+
+            <!-- LEFT: FLIP CAMERA -->
+            <button onclick="flipCamera()"
+              class="w-12 h-12 rounded-full bg-white/20 backdrop-blur flex items-center justify-center border border-[var(--color-primary)]/30 text-[var(--color-primary)]">
+
+              <!-- flip icon -->
               <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                  d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 12V3m0 0l-3 3m3-3l3 3" />
+                  d="M4 4v6h6M20 20v-6h-6M5 19a9 9 0 0114-14M19 5a9 9 0 01-14 14" />
               </svg>
 
-              <!-- hidden file input -->
-              <input type="file" accept="image/*" class="hidden" onchange="uploadImage(event)">
-            </label>
+            </button>
 
-          
-          <!-- CENTER: CAPTURE -->
-          <button onclick="takePhoto()"
-            class="w-16 h-16 rounded-full bg-[var(--color-primary)] shadow-xl flex items-center justify-center border-4 border-white">
-
-            <div class="w-6 h-6 rounded-full border-2 border-white"></div>
-
-          </button>
-
-          <!-- LEFT: FLIP CAMERA -->
-          <button onclick="flipCamera()"
-            class="w-12 h-12 rounded-full bg-white/20 backdrop-blur flex items-center justify-center border border-[var(--color-primary)]/30 text-[var(--color-primary)]">
-
-            <!-- flip icon -->
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                d="M4 4v6h6M20 20v-6h-6M5 19a9 9 0 0114-14M19 5a9 9 0 01-14 14" />
-            </svg>
-
-          </button>
-
+          </div>
+          <canvas id="photoCanvas" class="hidden"></canvas>
         </div>
-        <canvas id="photoCanvas" class="hidden"></canvas>
       </div>
     `;
     }
@@ -492,7 +494,6 @@ async function startCamera() {
     const video = document.getElementById("cameraVideo");
     if (!video) return;
 
-    // stop previous stream before switching
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
     }
@@ -505,6 +506,9 @@ async function startCamera() {
     });
 
     video.srcObject = stream;
+
+    // Mirror only the front (selfie) camera preview
+    video.style.transform = useFrontCamera ? "scaleX(-1)" : "scaleX(1)";
 
   } catch (err) {
     console.error("Camera error:", err);
@@ -552,11 +556,18 @@ function takePhoto() {
   canvas.height = video.videoHeight;
 
   const ctx = canvas.getContext("2d");
+
+  if (useFrontCamera) {
+    // Flip horizontally so the saved photo isn't mirrored/backwards
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+  }
+
   ctx.drawImage(video, 0, 0);
 
   const dataURL = canvas.toDataURL("image/jpeg");
 
-  openPreview(dataURL); // 👉 NEW FLOW
+  openPreview(dataURL);
 }
 
 // OPEN PREVIEW
