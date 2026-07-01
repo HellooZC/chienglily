@@ -14,14 +14,6 @@
 
 // ---- Tunable knobs ----------------------------------------------------
 
-const SATURATION_BOOST = 1.28;       // >1 = punchier color (real CCD JPEGs are oversaturated, not muted)
-const CONTRAST_AMOUNT = 1.16;        // midtone contrast boost
-const SHARPEN_AMOUNT = 0.65;         // unsharp-mask strength -> the "crunchy" in-camera sharpening halo look
-const GRAIN_AMOUNT = 7;              // fine grain, kept restrained since this is a LOW-ISO look
-const VIGNETTE_STRENGTH = 0.25;      // corner darkening from a cheap lens
-const CHROMATIC_ABERRATION_PX = 2.2; // max R/B channel offset at the extreme corners
-const JPEG_REENCODE_QUALITY = 0.55;  // low-quality JPEG pass = authentic period compression artifacts
-const MAX_PROCESSING_DIMENSION = 1600; // cap long edge for perf; plenty for this app's card-sized display
 const EXPOSURE_STOPS = 0.6;          // +EV brighten before the tone curve — real digicams at base ISO often read a touch hot/flash-y
 const EXPOSURE_FACTOR = Math.pow(2, EXPOSURE_STOPS);
 const SATURATION_BOOST = 1.28;       // >1 = punchier color (real CCD JPEGs are oversaturated, not muted)
